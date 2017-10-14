@@ -1,0 +1,53 @@
+version = "0.0"
+sense = "min"
+variables = ["x1", "x2", "x3", "x4"]
+
+[objective]
+head = "ScalarAffineFunction"
+variables = ["x1", "x2", "x3"]
+coefficients = [3.0, 2.0, -4.0]
+constant = 0.0
+
+[[constraints]]
+name = "c1"
+
+    [constraints.set]
+    head = "Zeros"
+    dimension = 3
+
+    [constraints.function]
+    head = "VectorAffineFunction"
+    outputindex = [1, 1, 2, 3, 3]
+    variables = ["x1", "x4", "x2", "x1", "x3"]
+    coefficients = [1.0, -1.0, 1.0, 1.0, 1.0]
+    constant = [4.0, 3.0, -12.0]
+[[constraints]]
+name = "c2"
+
+    [constraints.set]
+    head = "Nonpositives"
+    dimension = 1
+
+    [constraints.function]
+    head = "VectorOfVariables"
+    variables = ["x2"]
+[[constraints]]
+name = "c3"
+
+    [constraints.set]
+    head = "Nonnegatives"
+    dimension = 1
+
+    [constraints.function]
+    head = "VectorOfVariables"
+    variables = ["x3"]
+[[constraints]]
+name = "c4"
+
+    [constraints.set]
+    head = "Zeros"
+    dimension = 1
+
+    [constraints.function]
+    head = "VectorOfVariables"
+    variables = ["x4"]
