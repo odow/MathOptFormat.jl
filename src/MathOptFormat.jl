@@ -1,7 +1,7 @@
 module MathOptFormat
 
 using JSON, DataStructures
-
+using TOML
 using MathOptInterface
 const MOI = MathOptInterface
 
@@ -42,7 +42,8 @@ Read a MOF file located at `file`
 """
 function MOFFile(file::String)
     d = open(file, "r") do io
-        JSON.parse(io, dicttype=OrderedDict{String, Any})
+        TOM.parse(io)
+        # JSON.parse(io, dicttype=OrderedDict{String, Any})
     end
     MOFFile(d, Dict{Any, Any}(), Dict{UInt64, Int}())
 end
@@ -52,11 +53,12 @@ Base.getindex(m::MOFFile, key) = getindex(m.d, key)
 Base.setindex!(m::MOFFile, key, value) = setindex!(m.d, key, value)
 
 function MOI.writeproblem(m::MOFFile, io::IO, indent::Int=0)
-    if indent > 0
-        write(io, JSON.json(m.d, indent))
-    else
-        write(io, JSON.json(m.d))
-    end
+    TOML.print(io, m.d)
+    # if indent > 0
+    #     write(io, JSON.json(m.d, indent))
+    # else
+    #     write(io, JSON.json(m.d))
+    # end
 end
 function MOI.writeproblem(m::MOFFile, f::String, indent::Int=0)
     open(f, "w") do io

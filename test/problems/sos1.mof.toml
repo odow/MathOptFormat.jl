@@ -1,0 +1,60 @@
+version = "0.0"
+sense = "max"
+variables = ["x1", "x2", "x3"]
+
+[objective]
+head = "ScalarAffineFunction"
+variables = ["x1", "x2", "x3"]
+coefficients = [2.0, 1.0, 1.0]
+constant = 0.0
+
+[[constraints]]
+name = "c1"
+
+    [constraints.set]
+    head = "LessThan"
+    upper = 1.0
+
+    [constraints.function]
+    head = "SingleVariable"
+    variable = "x1"
+[[constraints]]
+name = "c2"
+
+    [constraints.set]
+    head = "LessThan"
+    upper = 1.0
+
+    [constraints.function]
+    head = "SingleVariable"
+    variable = "x2"
+[[constraints]]
+name = "c3"
+
+    [constraints.set]
+    head = "LessThan"
+    upper = 2.0
+
+    [constraints.function]
+    head = "SingleVariable"
+    variable = "x3"
+[[constraints]]
+name = "c4"
+
+    [constraints.set]
+    head = "SOS1"
+    weights = [1.0, 2.0]
+
+    [constraints.function]
+    head = "VectorOfVariables"
+    variables = ["x1", "x2"]
+[[constraints]]
+name = "c5"
+
+    [constraints.set]
+    head = "SOS1"
+    weights = [1.0, 2.0]
+
+    [constraints.function]
+    head = "VectorOfVariables"
+    variables = ["x1", "x3"]
