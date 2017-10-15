@@ -2,8 +2,14 @@
  "version": "0.0",
  "sense": "min",
  "variables": [
-  "x",
-  "y"
+  {
+   "name": "x",
+   "VariablePrimalStart": null
+  },
+  {
+   "name": "y",
+   "VariablePrimalStart": null
+  }
  ],
  "objective": {
   "head": "ScalarAffineFunction",

@@ -5,9 +5,13 @@ Create a new MathOptInterface solver instance using `solver` from the MOFFile `m
 """
 function MOI.SolverInstance(mf::MOFFile, solver)
     m = MOI.SolverInstance(solver)
-    v = MOI.addvariables!(m, length(mf["variables"]), String.(mf["variables"]))
+    v = MOI.addvariables!(m, length(mf["variables"]))
+    for (i, dict) in enumerate(mf["variables"])
+        MOI.setattribute!(m, VariableName(), v[i], dict["name"])
+        MOI.setattribute!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
+    end
     for (s, vf) in zip(mf["variables"], v)
-        mf.ext[s] = vf
+        mf.ext[s["name"]] = vf
     end
     sense = (mf["sense"] == "min") ? MOI.MinSense : MOI.MaxSense
     MOI.setattribute!(m, MOI.ObjectiveFunction(), parse!(m, mf, mf["objective"]))

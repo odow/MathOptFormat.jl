@@ -1,10 +1,10 @@
 {
  "version": "0.0",
- "sense": "min",
+ "sense": "max",
  "variables": [
   {
    "name": "x1",
-   "VariablePrimalStart": null
+   "VariablePrimalStart": 1.0
   },
   {
    "name": "x2",
@@ -15,21 +15,36 @@
   "head": "ScalarAffineFunction",
   "variables": [
    "x1",
-   "x1"
+   "x2"
   ],
   "coefficients": [
-   1.0,
-   2.0
+   2.0,
+   -1.0
   ],
-  "constant": 3.0
+  "constant": 0.0
  },
  "constraints": [
   {
    "name": "c1",
    "set": {
-    "head": "Semicontinuous",
-    "lower": 1.0,
-    "upper": 5.0
+    "head": "EqualTo",
+    "value": 3.0
+   },
+   "function": {
+    "head": "ScalarAffineFunction",
+    "variables": [
+     "x1"
+    ],
+    "coefficients": [
+     2.0
+    ],
+    "constant": 1.0
+   }
+  },
+  {
+   "name": "c2",
+   "set": {
+    "head": "Integer"
    },
    "function": {
     "head": "SingleVariable",
@@ -37,11 +52,9 @@
    }
   },
   {
-   "name": "c2",
+   "name": "c3",
    "set": {
-    "head": "Semiinteger",
-    "lower": 2,
-    "upper": 6
+    "head": "ZeroOne"
    },
    "function": {
     "head": "SingleVariable",
