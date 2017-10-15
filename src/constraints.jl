@@ -7,7 +7,9 @@ function MOI.addconstraint!(m::MOFFile, func::F, set::S, name::String="") where 
         Object(
             "name"     => name,
             "set"      => Object(set),
-            "function" =>  Object!(m, func)
+            "function" =>  Object!(m, func),
+            # "ConstraintPrimalStart" => NaN,
+            # "ConstraintDualStart" => NaN,
         )
     )
     m.constrmap[UInt64(idx)] = idx

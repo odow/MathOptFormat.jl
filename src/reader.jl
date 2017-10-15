@@ -8,7 +8,9 @@ function MOI.SolverInstance(mf::MOFFile, solver)
     v = MOI.addvariables!(m, length(mf["variables"]))
     for (i, dict) in enumerate(mf["variables"])
         MOI.setattribute!(m, VariableName(), v[i], dict["name"])
-        MOI.setattribute!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
+        if haskey(dict, "VariablePrimalStart")
+            MOI.setattribute!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
+        end
     end
     for (s, vf) in zip(mf["variables"], v)
         mf.ext[s["name"]] = vf
@@ -17,7 +19,13 @@ function MOI.SolverInstance(mf::MOFFile, solver)
     MOI.setattribute!(m, MOI.ObjectiveFunction(), parse!(m, mf, mf["objective"]))
     MOI.setattribute!(m, MOI.ObjectiveSense(), sense)
     for con in mf["constraints"]
-        MOI.addconstraint!(m, parse!(m, mf, con["function"]), parse!(m, mf, con["set"]), con["name"])
+        c = MOI.addconstraint!(m, parse!(m, mf, con["function"]), parse!(m, mf, con["set"]), con["name"])
+        if haskey(con, "ConstraintPrimalStart")
+            MOI.setattribute!(m, MOI.ConstraintPrimalStart(), c, con["ConstraintPrimalStart"])
+        end
+        if haskey(con, "ConstraintDualStart")
+            MOI.setattribute!(m, MOI.ConstraintDualStart(), c, con["ConstraintDualStart"])
+        end
     end
     m
 end

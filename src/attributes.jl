@@ -14,3 +14,78 @@ function Object(sense::MOI.OptimizationSense)
     end
     error("Sense $(sense) not recognised.")
 end
+
+
+"""
+    VariableName()
+
+The name of the variable.
+"""
+struct VariableName <: MOI.AbstractVariableAttribute end
+"""
+    MOI.setattribute!(m::MOFFile, ::MOF.VariableName, v::MOI.VariableReference, name::String)
+
+Rename the variable `v` in the MOFFile `m` to `name`. This should be done
+immediately after introducing a variable and before it is used in any constraints.
+
+If the variable has already been used, this function will _not_ update the
+previous references.
+"""
+MOI.setattribute!(m::MOFFile, ::VariableName, v::MOI.VariableReference, name::String) = setattr!(m, v, "name", name)
+MOI.setattribute!(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference, value) = setattr!(m, v, "VariablePrimalStart", value)
+
+function setattr!(m::MOFFile, v::MOI.VariableReference, key::String, val)
+    m["variables"][m.ext[v]][key] = val
+end
+function getattr(m::MOFFile, v::MOI.VariableReference, key::String)
+    m["variables"][m.ext[v]][key]
+end
+function hasattr(m::MOFFile, v::MOI.VariableReference, key::String)
+    isvalid(m, v) && haskey(m["variables"][m.ext[v]], key)
+end
+
+MOI.getattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = getattr(m, v, "name")
+MOI.getattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = getattr(m, v, "VariablePrimalStart")
+
+MOI.cansetattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = isvalid(m, v)
+MOI.cansetattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = isvalid(m, v)
+
+MOI.cangetattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = hasattr(m, v, "name")
+MOI.cangetattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = hasattr(m, v, "VariablePrimalStart")
+
+"""
+    ConstraintName()
+
+The name of the variable.
+"""
+struct ConstraintName <: MOI.AbstractConstraintAttribute end
+
+"""
+    MOI.setattribute!(m::MOFFile, ::MOF.ConstraintName, c::MOI.ConstraintReference, name::String)
+
+Rename the constraint `c` in the MOFFile `m` to `name`.
+"""
+MOI.setattribute!(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference, name::String) = setattr!(m, c, "name", name)
+MOI.setattribute!(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference, value) = setattr!(m, c, "ConstraintPrimalStart", value)
+MOI.setattribute!(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference, value) = setattr!(m, c, "ConstraintDualStart", value)
+
+function setattr!(m::MOFFile, c::MOI.ConstraintReference, key::String, val)
+    m["constraints"][m.constrmap[c.value]][key] = val
+end
+function getattr(m::MOFFile, c::MOI.ConstraintReference, key::String)
+    m["constraints"][m.constrmap[c.value]][key]
+end
+function hasattr(m::MOFFile, c::MOI.ConstraintReference, key::String)
+    isvalid(m, c) && haskey(m["constraints"][m.constrmap[c.value]], key)
+end
+MOI.getattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = getattr(m, v, "name")
+MOI.getattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = getattr(m, v, "ConstraintPrimalStart")
+MOI.getattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = getattr(m, v, "ConstraintDualStart")
+
+MOI.cansetattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = isvalid(m, c)
+MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = isvalid(m, c)
+MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = isvalid(m, c)
+
+MOI.cangetattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = hasattr(m, c, "name")
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = hasattr(m, c, "ConstraintPrimalStart")
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = hasattr(m, c, "ConstraintDualStart")

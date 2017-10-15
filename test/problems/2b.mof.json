@@ -38,7 +38,8 @@
      2.0
     ],
     "constant": 1.0
-   }
+   },
+   "ConstraintPrimalStart": 1.0
   },
   {
    "name": "c2",

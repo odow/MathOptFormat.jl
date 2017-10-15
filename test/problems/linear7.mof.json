@@ -3,12 +3,10 @@
  "sense": "min",
  "variables": [
   {
-   "name": "x",
-   "VariablePrimalStart": null
+   "name": "x"
   },
   {
-   "name": "y",
-   "VariablePrimalStart": null
+   "name": "y"
   }
  ],
  "objective": {

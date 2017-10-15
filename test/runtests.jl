@@ -220,6 +220,14 @@ end
         MOI.setattribute!(m, MOI.VariablePrimalStart(), x, 1.0)
         WRITEFILES && MOI.writeproblem(m, problempath("2a.mof.json"), 1)
         @test stringify(m) == getproblem("2a.mof.json")
+
+        MOI.setattribute!(m, MOI.ConstraintPrimalStart(), c1, 1.0)
+        WRITEFILES && MOI.writeproblem(m, problempath("2b.mof.json"), 1)
+        @test stringify(m) == getproblem("2b.mof.json")
+
+        MOI.setattribute!(m, MOI.ConstraintDualStart(), c1, -1.0)
+        WRITEFILES && MOI.writeproblem(m, problempath("2c.mof.json"), 1)
+        @test stringify(m) == getproblem("2c.mof.json")
     end
 
     @testset "3.mof.json" begin
