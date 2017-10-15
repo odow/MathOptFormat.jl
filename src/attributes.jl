@@ -41,14 +41,14 @@ function getattr(m::MOFFile, v::MOI.VariableReference, key::String)
     m["variables"][m.ext[v]][key]
 end
 function hasattr(m::MOFFile, v::MOI.VariableReference, key::String)
-    isvalid(m, v) && haskey(m["variables"][m.ext[v]], key)
+    MOI.isvalid(m, v) && haskey(m["variables"][m.ext[v]], key)
 end
 
 MOI.getattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = getattr(m, v, "name")
 MOI.getattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = getattr(m, v, "VariablePrimalStart")
 
-MOI.cansetattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = isvalid(m, v)
-MOI.cansetattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = isvalid(m, v)
+MOI.cansetattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = MOI.isvalid(m, v)
+MOI.cansetattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = MOI.isvalid(m, v)
 
 MOI.cangetattribute(m::MOFFile, ::VariableName, v::MOI.VariableReference) = hasattr(m, v, "name")
 MOI.cangetattribute(m::MOFFile, ::MOI.VariablePrimalStart, v::MOI.VariableReference) = hasattr(m, v, "VariablePrimalStart")
@@ -76,15 +76,15 @@ function getattr(m::MOFFile, c::MOI.ConstraintReference, key::String)
     m["constraints"][m.constrmap[c.value]][key]
 end
 function hasattr(m::MOFFile, c::MOI.ConstraintReference, key::String)
-    isvalid(m, c) && haskey(m["constraints"][m.constrmap[c.value]], key)
+    MOI.isvalid(m, c) && haskey(m["constraints"][m.constrmap[c.value]], key)
 end
 MOI.getattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = getattr(m, v, "name")
 MOI.getattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = getattr(m, v, "ConstraintPrimalStart")
 MOI.getattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = getattr(m, v, "ConstraintDualStart")
 
-MOI.cansetattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = isvalid(m, c)
-MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = isvalid(m, c)
-MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = isvalid(m, c)
+MOI.cansetattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
+MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
+MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
 
 MOI.cangetattribute(m::MOFFile, ::ConstraintName, c::MOI.ConstraintReference) = hasattr(m, c, "name")
 MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = hasattr(m, c, "ConstraintPrimalStart")

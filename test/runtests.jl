@@ -133,9 +133,10 @@ end
             MOI.GreaterThan(3.0))
         c1 = MOI.addconstraint!(m,
             MOI.ScalarAffineFunction([v], [1.0], 0.0),
-            MOI.GreaterThan(3.0),
-            "firstconstraint"
+            MOI.GreaterThan(3.0)
         )
+        @test MOI.cansetattribute(m, MOF.ConstraintName(), c1)
+        MOI.setattribute!(m, MOF.ConstraintName(), c1, "firstconstraint")
         @test typeof(c1) == MOI.ConstraintReference{MOI.ScalarAffineFunction{Float64}, MOI.GreaterThan{Float64}}
         WRITEFILES && MOI.writeproblem(m, problempath("1.mof.json"), 1)
         @test stringify(m) == getproblem("1.mof.json")
@@ -216,15 +217,15 @@ end
         MOI.addconstraint!(m, MOI.SingleVariable(y), MOI.ZeroOne())
         WRITEFILES && MOI.writeproblem(m, problempath("2.mof.json"), 1)
         @test stringify(m) == getproblem("2.mof.json")
-
+        @test MOI.cansetattribute(m, MOI.VariablePrimalStart(), x)
         MOI.setattribute!(m, MOI.VariablePrimalStart(), x, 1.0)
         WRITEFILES && MOI.writeproblem(m, problempath("2a.mof.json"), 1)
         @test stringify(m) == getproblem("2a.mof.json")
-
+        @test MOI.cansetattribute(m, MOI.ConstraintPrimalStart(), c1)
         MOI.setattribute!(m, MOI.ConstraintPrimalStart(), c1, 1.0)
         WRITEFILES && MOI.writeproblem(m, problempath("2b.mof.json"), 1)
         @test stringify(m) == getproblem("2b.mof.json")
-
+        @test MOI.cansetattribute(m, MOI.ConstraintDualStart(), c1)
         MOI.setattribute!(m, MOI.ConstraintDualStart(), c1, -1.0)
         WRITEFILES && MOI.writeproblem(m, problempath("2c.mof.json"), 1)
         @test stringify(m) == getproblem("2c.mof.json")
@@ -264,8 +265,13 @@ end
         # s.t. 0.0 <= x          (c1)
         #             y <= 0.0   (c2)
         m = MOF.MOFFile()
-        x = MOI.addvariable!(m, "x")
-        y = MOI.addvariable!(m, "y")
+        x = MOI.addvariable!(m)
+        y = MOI.addvariable!(m)
+        @test MOI.cansetattribute(m, MOF.VariableName(), x)
+        MOI.setattribute!(m, MOF.VariableName(), x, "x")
+        @test MOI.cansetattribute(m, MOF.VariableName(), y)
+        MOI.setattribute!(m, MOF.VariableName(), y, "y")
+
         MOI.setattribute!(m, MOI.ObjectiveFunction(),
             MOI.ScalarAffineFunction([x, y], [1.0, -1.0], 0.0)
         )
