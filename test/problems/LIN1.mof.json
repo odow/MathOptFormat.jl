@@ -3,16 +3,13 @@
  "sense": "min",
  "variables": [
   {
-   "name": "x1",
-   "VariablePrimalStart": null
+   "name": "x1"
   },
   {
-   "name": "x2",
-   "VariablePrimalStart": null
+   "name": "x2"
   },
   {
-   "name": "x3",
-   "VariablePrimalStart": null
+   "name": "x3"
   }
  ],
  "objective": {
