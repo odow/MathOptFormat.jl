@@ -10,7 +10,7 @@ Convert a MOI function into the MathOptFormat representation.
 """
 function Object! end
 
-getname!(m::MOFFile, v::MOI.VariableReference) = MOI.getattribute(m, VariableName(), v)
+getname!(m::MOFFile, v::MOI.VariableReference) = MOI.getattribute(m, MOI.VariableName(), v)
 
 Object!(m::MOFFile, f::MOI.SingleVariable) = Object("head"=>"SingleVariable", "variable"=> getname!(m, f.variable))
 

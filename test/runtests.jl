@@ -135,8 +135,8 @@ end
             MOI.ScalarAffineFunction([v], [1.0], 0.0),
             MOI.GreaterThan(3.0)
         )
-        @test MOI.cansetattribute(m, MOF.ConstraintName(), c1)
-        MOI.setattribute!(m, MOF.ConstraintName(), c1, "firstconstraint")
+        @test MOI.cansetattribute(m, MOI.ConstraintName(), c1)
+        MOI.setattribute!(m, MOI.ConstraintName(), c1, "firstconstraint")
         @test typeof(c1) == MOI.ConstraintReference{MOI.ScalarAffineFunction{Float64}, MOI.GreaterThan{Float64}}
         WRITEFILES && MOI.writeproblem(m, problempath("1.mof.json"), 1)
         @test stringify(m) == getproblem("1.mof.json")
@@ -267,10 +267,10 @@ end
         m = MOF.MOFFile()
         x = MOI.addvariable!(m)
         y = MOI.addvariable!(m)
-        @test MOI.cansetattribute(m, MOF.VariableName(), x)
-        MOI.setattribute!(m, MOF.VariableName(), x, "x")
-        @test MOI.cansetattribute(m, MOF.VariableName(), y)
-        MOI.setattribute!(m, MOF.VariableName(), y, "y")
+        @test MOI.cansetattribute(m, MOI.VariableName(), x)
+        MOI.setattribute!(m, MOI.VariableName(), x, "x")
+        @test MOI.cansetattribute(m, MOI.VariableName(), y)
+        MOI.setattribute!(m, MOI.VariableName(), y, "y")
 
         MOI.setattribute!(m, MOI.ObjectiveFunction(),
             MOI.ScalarAffineFunction([x, y], [1.0, -1.0], 0.0)

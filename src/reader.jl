@@ -8,7 +8,7 @@ function MOI.SolverInstance(mf::MOFFile, solver)
     v = MOI.addvariables!(m, length(mf["variables"]))
     for (i, dict) in enumerate(mf["variables"])
         mf.ext[dict["name"]] = v[i]
-        MOI.setattribute!(m, VariableName(), v[i], dict["name"])
+        MOI.setattribute!(m, MOI.VariableName(), v[i], dict["name"])
         if haskey(dict, "VariablePrimalStart")
             MOI.setattribute!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
         end
@@ -18,7 +18,7 @@ function MOI.SolverInstance(mf::MOFFile, solver)
     MOI.setattribute!(m, MOI.ObjectiveSense(), sense)
     for con in mf["constraints"]
         c = MOI.addconstraint!(m, parse!(m, mf, con["function"]), parse!(m, mf, con["set"]))
-        MOI.setattribute!(m, ConstraintName(), c, con["name"])
+        MOI.setattribute!(m, MOI.ConstraintName(), c, con["name"])
         if haskey(con, "ConstraintPrimalStart")
             MOI.setattribute!(m, MOI.ConstraintPrimalStart(), c, con["ConstraintPrimalStart"])
         end
