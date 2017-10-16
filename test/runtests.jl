@@ -286,7 +286,7 @@ end
 
         @test MOI.canmodifyconstraint(m, c, MOI.VectorConstantChange([1.0]))
         MOI.modifyconstraint!(m, c, MOI.VectorConstantChange([1.0]))
-        MOI.writeproblem(m, problempath("linear7a.mof.json"), 1)
+        WRITEFILES && MOI.writeproblem(m, problempath("linear7a.mof.json"), 1)
         @test stringify(m) == getproblem("linear7a.mof.json")
     end
 
@@ -352,7 +352,7 @@ end
 
         MOI.setattribute!(m, MOI.ObjectiveFunction(), MOI.ScalarAffineFunction([x,y], [1.0,1.0], 0.0))
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
-        # MOI.writeproblem(m, "test/problems/qcp.mof.json",1)
+        WRITEFILES && MOI.writeproblem(m, problempath("qcp.mof.json"), 1)
         @test stringify(m) == getproblem("qcp.mof.json")
     end
 
