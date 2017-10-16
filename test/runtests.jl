@@ -178,6 +178,10 @@ end
             c3,
             MOI.Integer()
         )
+        @test MOI.cangetattribute(m, MOI.ConstraintSet(), c4)
+        @test MOI.getattribute(m, MOI.ConstraintSet(), c4) == MOI.Integer()
+        @test MOI.cangetattribute(m, MOI.ConstraintFunction(), c4)
+        @test MOI.getattribute(m, MOI.ConstraintFunction(), c4) == MOI.SingleVariable(u)
         WRITEFILES && MOI.writeproblem(m, problempath("1g.mof.json"), 1)
         @test stringify(m) == getproblem("1g.mof.json")
     end
@@ -190,6 +194,8 @@ end
         m = MOF.MOFFile()
         x = MOI.addvariable!(m)
         y = MOI.addvariable!(m)
+        @test MOI.cangetattribute(m, MOI.NumberOfVariables())
+        @test MOI.getattribute(m, MOI.NumberOfVariables()) == 2
         c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 0.0)
         MOI.setattribute!(m, MOI.ObjectiveFunction(), c)
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
@@ -247,6 +253,7 @@ end
                 0.0
             )
         )
+        @test MOI.cansetattribute(m, MOI.ObjectiveSense(), MOI.MaxSense)
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
         @test MOI.cangetattribute(m, MOI.ObjectiveSense())
         @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MaxSense

@@ -138,12 +138,3 @@ parse!(::Val{:PowerCone}, m, set)                        = MOI.PowerCone(floatif
 parse!(::Val{:DualPowerCone}, m, set)                    = MOI.DualPowerCone(floatify(set["exponent"]))
 parse!(::Val{:PositiveSemidefiniteConeTriangle}, m, set) = MOI.PositiveSemidefiniteConeTriangle(set["dimension"])
 parse!(::Val{:PositiveSemidefiniteConeScaled}, m, set)   = MOI.PositiveSemidefiniteConeScaled(set["dimension"])
-
-function MOI.getattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference)
-    parse!(m, m[c]["function"])
-end
-MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
-function MOI.getattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference)
-    parse!(m, m[c]["set"])
-end
-MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference) = MOI.isvalid(m, c)

@@ -94,3 +94,12 @@ MOI.cansetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintRefe
 MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintName, c::MOI.ConstraintReference) = hasattr(m, c, "name")
 MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintPrimalStart, c::MOI.ConstraintReference) = hasattr(m, c, "ConstraintPrimalStart")
 MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintDualStart, c::MOI.ConstraintReference) = hasattr(m, c, "ConstraintDualStart")
+
+function MOI.getattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference)
+    parse!(m, m[c]["function"])
+end
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
+function MOI.getattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference)
+    parse!(m, m[c]["set"])
+end
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
