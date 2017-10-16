@@ -6,14 +6,15 @@ Create a new MathOptInterface solver instance using `solver` from the MOFFile `m
 function MOI.SolverInstance(mf::MOFFile, solver)
     m = MOI.SolverInstance(solver)
     v = MOI.addvariables!(m, length(mf["variables"]))
+    empty!(mf.namemap)
     for (i, dict) in enumerate(mf["variables"])
-        mf.ext[dict["name"]] = v[i]
+        mf.namemap[dict["name"]] = v[i]
         MOI.setattribute!(m, MOI.VariableName(), v[i], dict["name"])
         if haskey(dict, "VariablePrimalStart")
             MOI.setattribute!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
         end
     end
-    sense = (mf["sense"] == "min") ? MOI.MinSense : MOI.MaxSense
+    sense = MOI.getattribute(mf, MOI.ObjectiveSense())
     MOI.setattribute!(m, MOI.ObjectiveFunction(), parse!(mf, mf["objective"]))
     MOI.setattribute!(m, MOI.ObjectiveSense(), sense)
     for con in mf["constraints"]
@@ -41,7 +42,7 @@ MOI.SolverInstance(file::String, solver) = MOI.SolverInstance(MOFFile(file), sol
     Parse Function objects to MathOptInterface representation
 =#
 
-vvec(m::MOFFile, names::Vector) = MOI.VariableReference[m.ext[n] for n in names]
+vvec(m::MOFFile, names::Vector) = MOI.VariableReference[m.namemap[n] for n in names]
 
 # we need to do this because float.(Any[]) returns Any[] rather than Float64[]
 floatify(x::Vector{Float64}) = x
@@ -60,7 +61,7 @@ parse!(m::MOFFile, obj::Object) = parse!(Val{Symbol(obj["head"])}(), m, obj)
 
 function parse!(::Val{:SingleVariable}, m::MOFFile, f::Object)
     MOI.SingleVariable(
-        m.ext[f["variable"]]
+        m.namemap[f["variable"]]
     )
 end
 
@@ -137,3 +138,12 @@ parse!(::Val{:PowerCone}, m, set)                        = MOI.PowerCone(floatif
 parse!(::Val{:DualPowerCone}, m, set)                    = MOI.DualPowerCone(floatify(set["exponent"]))
 parse!(::Val{:PositiveSemidefiniteConeTriangle}, m, set) = MOI.PositiveSemidefiniteConeTriangle(set["dimension"])
 parse!(::Val{:PositiveSemidefiniteConeScaled}, m, set)   = MOI.PositiveSemidefiniteConeScaled(set["dimension"])
+
+function MOI.getattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference)
+    parse!(m, m[c]["function"])
+end
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintFunction, c::MOI.ConstraintReference) = MOI.isvalid(m, c)
+function MOI.getattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference)
+    parse!(m, m[c]["set"])
+end
+MOI.cangetattribute(m::MOFFile, ::MOI.ConstraintSet, c::MOI.ConstraintReference) = MOI.isvalid(m, c)

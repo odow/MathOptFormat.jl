@@ -5,7 +5,7 @@ const JSON = MOF.JSON
 
 # a switch to update the example files
 # if the format changes
-const WRITEFILES = false
+const WRITEFILES = true
 
 function stringify(m::MOF.MOFFile, indent::Int=1)
     io = IOBuffer()
@@ -101,17 +101,6 @@ end
         f = MOI.VectorQuadraticFunction([1], [v], [1.0], [1], [v], [v], [2.0], [3.0])
         @test JSON.json(MOF.Object!(m, f)) == "{\"head\":\"VectorQuadraticFunction\",\"affine_outputindex\":[1],\"affine_variables\":[\"x1\"],\"affine_coefficients\":[1.0],\"quadratic_outputindex\":[1],\"quadratic_rowvariables\":[\"x1\"],\"quadratic_colvariables\":[\"x1\"],\"quadratic_coefficients\":[2.0],\"constant\":[3.0]}"
     end
-end
-
-@testset "getname!" begin
-    m = MOF.MOFFile()
-    v = MOI.addvariable!(m)
-    @test MOF.getname!(m, v) == "x1"
-    @test length(m.d["variables"]) == 1
-    @test length(keys(m.ext)) == 1
-    @test MOF.getname!(m, v) == "x1"
-    @test length(m.d["variables"]) == 1
-    @test length(keys(m.ext)) == 1
 end
 
 @testset "OptimizationSense" begin
@@ -259,6 +248,8 @@ end
             )
         )
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
+        @test MOI.cangetattribute(m, MOI.ObjectiveSense())
+        @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MaxSense
 
         @test MOI.canaddconstraint(m,
             MOI.VectorOfVariables([x1, x2, x3]),
@@ -285,10 +276,20 @@ end
         @test MOI.cansetattribute(m, MOI.VariableName(), y)
         MOI.setattribute!(m, MOI.VariableName(), y, "y")
 
-        MOI.setattribute!(m, MOI.ObjectiveFunction(),
+        @test MOI.cansetattribute(m, MOI.ObjectiveFunction(),
             MOI.ScalarAffineFunction([x, y], [1.0, -1.0], 0.0)
         )
+        obj = MOI.ScalarAffineFunction([x, y], [1.0, -1.0], 0.0)
+        MOI.setattribute!(m, MOI.ObjectiveFunction(), obj)
+        @test MOI.cangetattribute(m, MOI.ObjectiveFunction())
+        obj2 = MOI.getattribute(m, MOI.ObjectiveFunction())
+        @test obj.variables == obj2.variables
+        @test obj.coefficients == obj2.coefficients
+        @test obj.constant == obj2.constant
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MinSense)
+        @test MOI.cangetattribute(m, MOI.ObjectiveSense())
+        @test MOI.getattribute(m, MOI.ObjectiveSense()) == MOI.MinSense
+
         @test MOI.canaddconstraint(m, MOI.VectorAffineFunction([1],[x],[1.0],[0.0]), MOI.Nonnegatives(1))
         MOI.addconstraint!(m, MOI.VectorAffineFunction([1],[x],[1.0],[0.0]), MOI.Nonnegatives(1))
 
