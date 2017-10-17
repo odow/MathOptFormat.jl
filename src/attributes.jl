@@ -1,4 +1,4 @@
-MOI.getattribute(m::MOFFile, ::MOI.ListOfVariableReferences) = collect(keys(m.varmap))
+MOI.getattribute(m::MOFFile, ::MOI.ListOfVariableReferences) = [m.namemap[v["name"]] for v in m["variables"]]
 MOI.cangetattribute(m::MOFFile, ::MOI.ListOfVariableReferences) = true
 
 MOI.getattribute(m::MOFFile, ::MOI.NumberOfVariables) = length(m["variables"])
