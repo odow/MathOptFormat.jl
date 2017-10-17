@@ -1,3 +1,6 @@
+MOI.getattribute(m::MOFFile, ::MOI.ListOfVariableReferences) = collect(keys(m.varmap))
+MOI.cangetattribute(m::MOFFile, ::MOI.ListOfVariableReferences) = true
+
 MOI.getattribute(m::MOFFile, ::MOI.NumberOfVariables) = length(m["variables"])
 MOI.cangetattribute(m::MOFFile, ::MOI.NumberOfVariables) = true
 

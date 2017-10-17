@@ -114,6 +114,14 @@ end
         # min 1x + 2x + 3
         # s.t        x >= 3
         solver = MOF.MOFWriter()
+        @test MOI.supportsproblem(solver, MOI.ScalarAffineFunction{Float64}, [
+            (MOI.ScalarAffineFunction{Float64}, MOI.GreaterThan{Float64}),
+            (MOI.SingleVariable, MOI.Semicontinuous{Float64}),
+            (MOI.SingleVariable, MOI.Semiinteger{Float64}),
+            (MOI.SingleVariable, MOI.Integer)
+        ])
+
+
         m = MOI.SolverInstance(solver)
         v = MOI.addvariable!(m)
         f = MOI.ScalarAffineFunction([v, v], [1.0, 2.0], 3.0)
@@ -196,6 +204,10 @@ end
         y = MOI.addvariable!(m)
         @test MOI.cangetattribute(m, MOI.NumberOfVariables())
         @test MOI.getattribute(m, MOI.NumberOfVariables()) == 2
+
+        @test MOI.cangetattribute(m, MOI.ListOfVariableReferences())
+        @test MOI.getattribute(m, MOI.ListOfVariableReferences()) == [x,y]
+
         c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 0.0)
         MOI.setattribute!(m, MOI.ObjectiveFunction(), c)
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
