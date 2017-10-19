@@ -5,7 +5,7 @@ const JSON = MOF.JSON
 
 # a switch to update the example files
 # if the format changes
-const WRITEFILES = true
+const WRITEFILES = false
 
 function stringify(m::MOF.MOFFile, indent::Int=1)
     io = IOBuffer()
@@ -221,7 +221,7 @@ end
         @test MOI.cangetattribute(m, MOI.ListOfVariableReferences())
         @test MOI.getattribute(m, MOI.ListOfVariableReferences()) == [x,y]
 
-        c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 1.0)
+        c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 0.0)
         MOI.setattribute!(m, MOI.ObjectiveFunction(), c)
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
         @test MOI.canaddconstraint(m,
