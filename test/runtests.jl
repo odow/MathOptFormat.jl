@@ -18,7 +18,12 @@ function getproblem(file::String)
 end
 problempath(prob::String) = joinpath(@__DIR__, "problems", prob)
 
-@testset "MOFFile" begin
+@testset "floatify" begin
+    # just to get 100% coverage
+    @test MOF.floatify(1) == 1.0
+end
+
+@testset "MOFFile and MOFWriter" begin
 
     @testset "JSON.json(::MOFFile)" begin
         m = MOF.MOFFile()
@@ -26,6 +31,10 @@ problempath(prob::String) = joinpath(@__DIR__, "problems", prob)
         @test getproblem("test.mof.json") == "{\"version\":\"0.0\",\"sense\":\"min\",\"variables\":[],\"objective\":{},\"constraints\":[]}"
         rm(problempath("test.mof.json"))
     end
+
+    solver = MOF.MOFWriter()
+    @test !MOI.supportsproblem(solver, MOI.Integer, [])
+    @test !MOI.supportsproblem(solver, MOI.ScalarAffineFunction{Float64}, [(MOI.SingleVariable, MOI.SingleVariable)])
 
 end
 
@@ -106,6 +115,10 @@ end
 @testset "OptimizationSense" begin
     @test MOF.object(MOI.MinSense) == "min"
     @test MOF.object(MOI.MaxSense) == "max"
+    @test_throws Exception MOF.object(MOI.FeasibilitySense)
+    m = MOF.MOFFile()
+    m["sense"] = "Max"
+    @test_throws Exception MOI.getattribute(m, MOI.ObjectiveSense())
 end
 
 @testset "Write Examples" begin
@@ -208,7 +221,7 @@ end
         @test MOI.cangetattribute(m, MOI.ListOfVariableReferences())
         @test MOI.getattribute(m, MOI.ListOfVariableReferences()) == [x,y]
 
-        c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 0.0)
+        c = MOI.ScalarAffineFunction([x, y], [2.0, -1.0], 1.0)
         MOI.setattribute!(m, MOI.ObjectiveFunction(), c)
         MOI.setattribute!(m, MOI.ObjectiveSense(), MOI.MaxSense)
         @test MOI.canaddconstraint(m,

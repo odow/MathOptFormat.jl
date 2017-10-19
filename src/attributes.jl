@@ -23,6 +23,7 @@ function MOI.getattribute(m::MOFFile, ::MOI.ObjectiveSense)
     elseif m["sense"] == "max"
         return MOI.MaxSense
     else
+        # what about feasibility sense?
         error("Unknown objective sense $(m["sense"])")
     end
 end
