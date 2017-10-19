@@ -81,11 +81,11 @@ include("attributes.jl")
 include("reader.jl")
 
 function MOI.supportsproblem(m::MOFWriter, obj, constraints::Vector)
-    if !Base.method_exists(Object!, (MOFFile, obj))
+    if !Base.method_exists(object!, (MOFFile, obj))
         return false
     end
     for (f, s) in constraints
-        if !(Base.method_exists(Object!, (MOFFile, f)) && Base.method_exists(Object, (s,)))
+        if !(Base.method_exists(object!, (MOFFile, f)) && Base.method_exists(object, (s,)))
             return false
         end
     end
