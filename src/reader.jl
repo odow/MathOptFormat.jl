@@ -1,9 +1,9 @@
 """
-    MOI.SolverInstance(mf::MOFFile, solver)
+    MOI.SolverInstance(mf::MOFInstance, solver)
 
-Create a new MathOptInterface solver instance using `solver` from the MOFFile `mf`
+Create a new MathOptInterface solver instance using `solver` from the MOFInstance `mf`
 """
-function MOI.SolverInstance(mf::MOFFile, solver)
+function MOI.SolverInstance(mf::MOFInstance, solver)
     m = MOI.SolverInstance(solver)
     v = MOI.addvariables!(m, length(mf["variables"]))
     empty!(mf.namemap)
@@ -33,16 +33,16 @@ end
 """
     MOI.SolverInstance(file::String, solver)
 
-Create a new MathOptInterface solver instance using `solver` from the MOFFile
+Create a new MathOptInterface solver instance using `solver` from the MOFInstance
 located at the path `file`.
 """
-MOI.SolverInstance(file::String, solver) = MOI.SolverInstance(MOFFile(file), solver)
+MOI.SolverInstance(file::String, solver) = MOI.SolverInstance(MOFInstance(file), solver)
 
 #=
     Parse Function objects to MathOptInterface representation
 =#
 
-vvec(m::MOFFile, names::Vector) = MOI.VariableReference[m.namemap[n] for n in names]
+vvec(m::MOFInstance, names::Vector) = MOI.VariableReference[m.namemap[n] for n in names]
 
 # we need to do this because float.(Any[]) returns Any[] rather than Float64[]
 floatify(x::Vector{Float64}) = x
@@ -57,21 +57,21 @@ end
 floatify(x) = Float64(x)
 
 # dispatch on "head" Val types to avoid a big if .. elseif ... elseif ... end
-parse!(m::MOFFile, obj::Object) = parse!(Val{Symbol(obj["head"])}(), m, obj)
+parse!(m::MOFInstance, obj::Object) = parse!(Val{Symbol(obj["head"])}(), m, obj)
 
-function parse!(::Val{:SingleVariable}, m::MOFFile, f::Object)
+function parse!(::Val{:SingleVariable}, m::MOFInstance, f::Object)
     MOI.SingleVariable(
         m.namemap[f["variable"]]
     )
 end
 
-function parse!(::Val{:VectorOfVariables}, m::MOFFile, f::Object)
+function parse!(::Val{:VectorOfVariables}, m::MOFInstance, f::Object)
     MOI.VectorOfVariables(
         vvec(m, f["variables"])
     )
 end
 
-function parse!(::Val{:ScalarAffineFunction}, m::MOFFile, f::Object)
+function parse!(::Val{:ScalarAffineFunction}, m::MOFInstance, f::Object)
     MOI.ScalarAffineFunction(
         vvec(m, f["variables"]),
         floatify(f["coefficients"]),
@@ -79,7 +79,7 @@ function parse!(::Val{:ScalarAffineFunction}, m::MOFFile, f::Object)
     )
 end
 
-function parse!(::Val{:VectorAffineFunction}, m::MOFFile, f::Object)
+function parse!(::Val{:VectorAffineFunction}, m::MOFInstance, f::Object)
     MOI.VectorAffineFunction(
         Int.(f["outputindex"]),
         vvec(m, f["variables"]),
@@ -88,7 +88,7 @@ function parse!(::Val{:VectorAffineFunction}, m::MOFFile, f::Object)
     )
 end
 
-function parse!(::Val{:ScalarQuadraticFunction}, m::MOFFile, f::Object)
+function parse!(::Val{:ScalarQuadraticFunction}, m::MOFInstance, f::Object)
     MOI.ScalarQuadraticFunction(
         vvec(m, f["affine_variables"]),
         floatify(f["affine_coefficients"]),
@@ -99,7 +99,7 @@ function parse!(::Val{:ScalarQuadraticFunction}, m::MOFFile, f::Object)
     )
 end
 
-function parse!(::Val{:VectorQuadraticFunction}, m::MOFFile, f::Object)
+function parse!(::Val{:VectorQuadraticFunction}, m::MOFInstance, f::Object)
     MOI.VectorQuadraticFunction(
         Int.(f["affine_outputindex"]),
         vvec(m, f["affine_variables"]),
