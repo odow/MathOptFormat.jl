@@ -51,14 +51,14 @@ function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
     for con in src["constraints"]
         func = parse!(src, con["function"])
         set  = parse!(src, con["set"])
-        if MOI.canaddconstraint(dest, func, set)
+        # if MOI.canaddconstraint(dest, func, set)
             c = MOI.addconstraint!(dest, func, set)
             tryset!(dest, con, c, MOI.ConstraintName(), "name")
             tryset!(dest, con, c, MOI.ConstraintPrimalStart(), "ConstraintPrimalStart")
             tryset!(dest, con, c, MOI.ConstraintDualStart(), "ConstraintDualStart")
-        else
-            error("Unable to add the constraint of type ($(func["head"]), $(set["head"]))")
-        end
+        # else
+            # error("Unable to add the constraint of type ($(con["function"]["head"]), $(con["set"]["head"]))")
+        # end
     end
     dest
 end
