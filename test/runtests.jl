@@ -29,7 +29,7 @@ end
         m = MOF.MOFInstance()
         MOI.addvariable!(m)
         MOI.write(m, problempath("test.mof.json"))
-        @test getproblem("test.mof.json") == "{\"version\":\"0.0\",\"sense\":\"min\",\"variables\":[{\"name\":\"x1\"}],\"objective\":{},\"constraints\":[]}"
+        @test getproblem("test.mof.json") == "{\"version\":\"0.0\",\"sense\":\"min\",\"variables\":[{\"name\":\"x1\"}],\"objective\":{\"head\":\"ScalarAffineFunction\",\"variables\":[],\"coefficients\":[],\"constant\":0.0},\"constraints\":[]}"
         # test different ways to read a model from file
         m2 = MOF.MOFInstance(problempath("test.mof.json"))
         m3 = MOF.MOFInstance()
@@ -516,11 +516,16 @@ end
             ]
         @testset "$(prob)" begin
             file_representation = getproblem("$(prob).mof.json")
-            MOFInstance = MOF.MOFInstance(problempath("$(prob).mof.json"))
-            @test stringify(MOFInstance) == file_representation
-            model =  MOI.SolverInstance(MOFInstance, MOF.MOFWriter())
+            # load from file
+            problem = MOF.MOFInstance(problempath("$(prob).mof.json"))
+            @test stringify(problem) == file_representation
+
+            model =  MOI.SolverInstance(MOF.MOFWriter())
+            MOI.read!(model, problempath("$(prob).mof.json"))
             @test stringify(model) == file_representation
-            model2 =  MOI.SolverInstance(problempath("$(prob).mof.json"), MOF.MOFWriter())
+
+            model2 =  MOI.SolverInstance(MOF.MOFWriter())
+            MOI.copy!(model2, model)
             @test stringify(model2) == file_representation
         end
     end

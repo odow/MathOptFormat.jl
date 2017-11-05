@@ -1,42 +1,67 @@
 """
-    MOI.SolverInstance(mf::MOFInstance, solver)
+    MOFInstance(file::String)
 
-Create a new MathOptInterface solver instance using `solver` from the MOFInstance `mf`
+Read a MOF file located at `file`
+
+### Example
+
+    MOFInstance("path/to/model.mof.json")
 """
-function MOI.SolverInstance(mf::MOFInstance, solver)
-    m = MOI.SolverInstance(solver)
-    v = MOI.addvariables!(m, length(mf["variables"]))
-    empty!(mf.namemap)
-    for (i, dict) in enumerate(mf["variables"])
-        mf.namemap[dict["name"]] = v[i]
-        MOI.set!(m, MOI.VariableName(), v[i], dict["name"])
-        if haskey(dict, "VariablePrimalStart")
-            MOI.set!(m, MOI.VariablePrimalStart(), v[i], dict["VariablePrimalStart"])
-        end
-    end
-    sense = MOI.get(mf, MOI.ObjectiveSense())
-    MOI.set!(m, MOI.ObjectiveFunction(), parse!(mf, mf["objective"]))
-    MOI.set!(m, MOI.ObjectiveSense(), sense)
-    for con in mf["constraints"]
-        c = MOI.addconstraint!(m, parse!(mf, con["function"]), parse!(mf, con["set"]))
-        MOI.set!(m, MOI.ConstraintName(), c, con["name"])
-        if haskey(con, "ConstraintPrimalStart")
-            MOI.set!(m, MOI.ConstraintPrimalStart(), c, con["ConstraintPrimalStart"])
-        end
-        if haskey(con, "ConstraintDualStart")
-            MOI.set!(m, MOI.ConstraintDualStart(), c, con["ConstraintDualStart"])
-        end
-    end
+function MOFInstance(file::String)
+    m = MOFInstance()
+    MOI.read!(m, file)
     m
 end
 
-"""
-    MOI.SolverInstance(file::String, solver)
+function MOI.read!(m::MOFInstance, file::String)
+    d = open(file, "r") do io
+        JSON.parse(io, dicttype=OrderedDict{String, Any})
+    end
+    if length(m["variables"]) > 0
+        error("Unable to load the model from $(file). Instance is not empty!")
+    end
+    src = MOFInstance(d, Dict{String, MOI.VariableReference}(), Dict{MOI.VariableReference, Int}(), Dict{UInt64, Int}(), CurrentReference(UInt64(0), UInt64(0)))
+    # delete everything in the current instance
+    empty!(m.d)
+    m.d["version"]     = "0.0"
+    m.d["sense"]       = "min"
+    m.d["variables"]   = Object[]
+    m.d["objective"]   = Object("head"=>"ScalarAffineFunction", "variables"=>String[], "coefficients"=>Float64[], "constant"=>0.0)
+    m.d["constraints"] = Object[]
+    MOI.copy!(m, src)
+end
 
-Create a new MathOptInterface solver instance using `solver` from the MOFInstance
-located at the path `file`.
-"""
-MOI.SolverInstance(file::String, solver) = MOI.SolverInstance(MOFInstance(file), solver)
+function tryset!(dest, dict, ref, attr, str)
+    if haskey(dict, str) && MOI.canset(dest, attr, ref)
+        MOI.set!(dest, attr, ref, dict[str])
+    end
+end
+
+function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
+    v = MOI.addvariables!(dest, length(src["variables"]))
+    empty!(src.namemap)
+    for (i, dict) in enumerate(src["variables"])
+        src.namemap[dict["name"]] = v[i]
+        tryset!(dest, dict, v[i], MOI.VariableName(), "name")
+        tryset!(dest, dict, v[i], MOI.VariablePrimalStart(), "VariablePrimalStart")
+    end
+    sense = MOI.get(src, MOI.ObjectiveSense())
+    MOI.set!(dest, MOI.ObjectiveFunction(), parse!(src, src["objective"]))
+    MOI.set!(dest, MOI.ObjectiveSense(), sense)
+    for con in src["constraints"]
+        func = parse!(src, con["function"])
+        set  = parse!(src, con["set"])
+        if MOI.canaddconstraint(dest, func, set)
+            c = MOI.addconstraint!(dest, func, set)
+            tryset!(dest, con, c, MOI.ConstraintName(), "name")
+            tryset!(dest, con, c, MOI.ConstraintPrimalStart(), "ConstraintPrimalStart")
+            tryset!(dest, con, c, MOI.ConstraintDualStart(), "ConstraintDualStart")
+        else
+            error("Unable to add the constraint of type ($(func["head"]), $(set["head"]))")
+        end
+    end
+    dest
+end
 
 #=
     Parse Function objects to MathOptInterface representation
@@ -57,7 +82,9 @@ end
 floatify(x) = Float64(x)
 
 # dispatch on "head" Val types to avoid a big if .. elseif ... elseif ... end
-parse!(m::MOFInstance, obj::Object) = parse!(Val{Symbol(obj["head"])}(), m, obj)
+function parse!(m::MOFInstance, obj::Object)
+    parse!(Val{Symbol(obj["head"])}(), m, obj)
+end
 
 function parse!(::Val{:SingleVariable}, m::MOFInstance, f::Object)
     MOI.SingleVariable(

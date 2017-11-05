@@ -29,7 +29,7 @@ MOFInstance() = MOFInstance(
         "version" => "0.0",
         "sense"   => "min",
         "variables" => Object[],
-        "objective" => Object(),
+        "objective" => Object("head"=>"ScalarAffineFunction", "variables"=>String[], "coefficients"=>Float64[], "constant"=>0.0),
         "constraints" => Object[]
     ),
     Dict{String, MOI.VariableReference}(),
@@ -41,34 +41,6 @@ MOFInstance() = MOFInstance(
 
 struct MOFWriter <: MOI.AbstractSolver end
 MOI.SolverInstance(::MOFWriter) = MOFInstance()
-
-"""
-    MOFInstance(file::String)
-
-Read a MOF file located at `file`
-
-### Example
-
-    MOFInstance("path/to/model.mof.json")
-"""
-function MOFInstance(file::String)
-    d = open(file, "r") do io
-        JSON.parse(io, dicttype=OrderedDict{String, Any})
-    end
-    MOFInstance(d, Dict{String, MOI.VariableReference}(), Dict{MOI.VariableReference, Int}(), Dict{UInt64, Int}(), CurrentReference(UInt64(0), UInt64(0)))
-end
-
-function MOI.read!(m::MOFInstance, file::String)
-    d = open(file, "r") do io
-        JSON.parse(io, dicttype=OrderedDict{String, Any})
-    end
-    if length(m["variables"]) > 0
-        error("Unable to load the model from $(file). Instance is not empty!")
-    end
-    # delete everything in the current instance
-    empty!(m.d)
-    copy!(m.d, d)
-end
 
 # overload getset for m.d
 Base.getindex(m::MOFInstance, key) = getindex(m.d, key)
