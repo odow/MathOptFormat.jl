@@ -264,12 +264,19 @@ end
         @test MOI.get(m, MOI.VariablePrimalStart(), x) == 1.0
         @test MOI.canget(m, MOI.VariableName(), x)
         @test MOI.get(m, MOI.VariableName(), x) == "x1"
+
+        @test MOI.canset(m, MOI.VariableName(), x)
+        MOI.set!(m, MOI.VariableName(), x, "y")
+
         @test MOI.canget(m, MOI.ConstraintName(), c1)
         @test MOI.get(m, MOI.ConstraintName(), c1) == "c1"
         @test MOI.canget(m, MOI.ConstraintPrimalStart(), c1)
         @test MOI.get(m, MOI.ConstraintPrimalStart(), c1) == 1.0
         @test MOI.canget(m, MOI.ConstraintDualStart(), c1)
         @test MOI.get(m, MOI.ConstraintDualStart(), c1) == -1.0
+
+        WRITEFILES && MOI.write(m, problempath("2d.mof.json"), 1)
+        @test stringify(m) == getproblem("2d.mof.json")
     end
 
     @testset "3.mof.json" begin
@@ -512,7 +519,7 @@ end
 
 @testset "Read-Write Examples" begin
     for prob in [
-            "1","1a","1b","1c","1d","1e","1f", "2", "2a", "2b", "2c", "3", "linear7", "linear7a", "qp1", "qcp", "LIN1", "LIN2", "linear1", "linear2", "mip01", "sos1", "conic"
+            "1","1a","1b","1c","1d","1e","1f", "2", "2a", "2b", "2c", "2d", "3", "linear7", "linear7a", "qp1", "qcp", "LIN1", "LIN2", "linear1", "linear2", "mip01", "sos1", "conic"
             ]
         @testset "$(prob)" begin
             file_representation = getproblem("$(prob).mof.json")

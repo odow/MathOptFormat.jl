@@ -48,21 +48,61 @@ end
 """
     MOI.set!(m::MOFInstance, ::MOI.VariableName, v::MOI.VariableReference, name::String)
 
-Rename the variable `v` in the MOFInstance `m` to `name`. This should be done
-immediately after introducing a variable and before it is used in any constraints.
+Rename the variable `v` in the MOFInstance `m` to `name`.
 
-If the variable has already been used, this function will _not_ update the
-previous references.
+*WARNING*: This has to loop through all constraints searching for the string of
+the variable name. If you have many constraints, this can be very slow.
 """
 function MOI.set!(m::MOFInstance, ::MOI.VariableName, v::MOI.VariableReference, name::String)
     current_name = MOI.get(m, MOI.VariableName(), v)
-    delete!(m.namemap, current_name)
-    setattr!(m, v, "name", name)
+    if name == current_name
+        return
+    end
     if haskey(m.namemap, name)
         error("Name $(name) already exists!")
     end
+    delete!(m.namemap, current_name)
+    setattr!(m, v, "name", name)
     m.namemap[name] = v
+    rename!(m["objective"], current_name, name)
+    for c in m["constraints"]
+        rename!(c["function"], current_name, name)
+    end
 end
+
+function rename!(x::Vector{String}, src, dest)
+    for (i, v) in enumerate(x)
+        if v == src
+            x[i] = dest
+        end
+    end
+end
+function rename!(obj::Object, src, dest)
+    rename!(Val{Symbol(obj["head"])}(), obj, src, dest)
+end
+
+function rename!(::Val{:SingleVariable}, obj, src, dest)
+    if obj["variable"] == src
+        obj["variable"] = dest
+    end
+end
+function rename!(::Union{
+        Val{:VectorOfVariables},
+        Val{:ScalarAffineFunction},
+        Val{:VectorAffineFunction}
+    }, obj, src, dest)
+    rename!(obj["variables"], src, dest)
+end
+function rename!(f::Union{
+        Val{:ScalarQuadraticFunction},
+        Val{:VectorQuadraticFunction}
+    }, obj, src, dest)
+    rename!(obj["affine_variables"], src, dest)
+    rename!(obj["quadratic_rowvariables"], src, dest)
+    rename!(obj["quadratic_colvariables"], src, dest)
+end
+
+
 MOI.set!(m::MOFInstance, ::MOI.VariablePrimalStart, v::MOI.VariableReference, value) = setattr!(m, v, "VariablePrimalStart", value)
 
 function setattr!(m::MOFInstance, v::MOI.VariableReference, key::String, val)
