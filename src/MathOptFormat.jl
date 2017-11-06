@@ -38,10 +38,6 @@ MOFInstance() = MOFInstance(
     CurrentReference(UInt64(0), UInt64(0))
 )
 
-
-struct MOFWriter <: MOI.AbstractSolver end
-MOI.SolverInstance(::MOFWriter) = MOFInstance()
-
 # overload getset for m.d
 Base.getindex(m::MOFInstance, key) = getindex(m.d, key)
 Base.setindex!(m::MOFInstance, key, value) = setindex!(m.d, key, value)
@@ -66,7 +62,7 @@ include("constraints.jl")
 include("attributes.jl")
 include("reader.jl")
 
-function MOI.supportsproblem(m::MOFWriter, obj, constraints::Vector)
+function MOI.supportsproblem(m::MOFInstance, obj, constraints::Vector)
     if !Base.method_exists(object!, (MOFInstance, obj))
         return false
     end
