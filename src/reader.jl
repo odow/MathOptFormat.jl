@@ -21,6 +21,15 @@ function MOI.read!(m::MOFInstance, file::String)
         error("Unable to load the model from $(file). Instance is not empty!")
     end
     src = MOFInstance(d, Dict{String, MOI.VariableReference}(), Dict{MOI.VariableReference, Int}(), Dict{UInt64, Int}(), CurrentReference(UInt64(0), UInt64(0)))
+    for (i, v) in enumerate(src["variables"])
+        src.namemap[v["name"]] = MOI.VariableReference(UInt64(i))
+        src.varmap[MOI.VariableReference(UInt64(i))] = i
+        src.current_reference.variable += 1
+    end
+    for (i, c) in enumerate(src["constraints"])
+        src.constrmap[UInt64(i)] = i
+        src.current_reference.constraint += 1
+    end
     # delete everything in the current instance
     empty!(m.d)
     m.d["version"]     = "0.0"
@@ -37,28 +46,84 @@ function tryset!(dest, dict, ref, attr, str)
     end
 end
 
-function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
-    v = MOI.addvariables!(dest, length(src["variables"]))
-    empty!(src.namemap)
-    for (i, dict) in enumerate(src["variables"])
-        src.namemap[dict["name"]] = v[i]
-        tryset!(dest, dict, v[i], MOI.VariableName(), "name")
-        tryset!(dest, dict, v[i], MOI.VariablePrimalStart(), "VariablePrimalStart")
+function getset!(dest, destref, src, srcref, attr)
+    if MOI.canget(src, attr, srcref) && MOI.canset(dest, attr, destref)
+        MOI.set!(dest, attr, destref, MOI.get(src, attr, srcref))
     end
+end
+
+function rereference!(x::Vector{MOI.VariableReference}, vmap::Dict{MOI.VariableReference, MOI.VariableReference})
+    for (i, v) in enumerate(x)
+        x[i] = vmap[v]
+    end
+end
+function rereference!(f::MOI.SingleVariable, vmap)
+    MOI.SingleVariable(vmap[f.variable])
+end
+function rereference!(f::Union{
+        MOI.VectorOfVariables,
+        MOI.ScalarAffineFunction,
+        MOI.VectorAffineFunction
+    }, vmap)
+    rereference!(f.variables, vmap)
+    f
+end
+function rereference!(f::Union{
+        MOI.ScalarQuadraticFunction,
+        MOI.VectorQuadraticFunction
+    }, vmap)
+    rereference!(f.affine_variables, vmap)
+    rereference!(f.quadratic_rowvariables, vmap)
+    rereference!(f.quadratic_colvariables, vmap)
+    f
+end
+
+function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
+    numvar = MOI.get(src, MOI.NumberOfVariables())
+    destv = MOI.addvariables!(dest, numvar)
+    srcv  = MOI.get(src, MOI.ListOfVariableReferences())
+    variablemap = Dict{MOI.VariableReference, MOI.VariableReference}()
+    for i in 1:numvar
+        getset!(dest, destv[i], src, srcv[i], MOI.VariableName())
+        getset!(dest, destv[i], src, srcv[i], MOI.VariablePrimalStart())
+        variablemap[srcv[i]] = destv[i]
+    end
+
     sense = MOI.get(src, MOI.ObjectiveSense())
-    MOI.set!(dest, MOI.ObjectiveFunction(), parse!(src, src["objective"]))
     MOI.set!(dest, MOI.ObjectiveSense(), sense)
-    for con in src["constraints"]
-        func = parse!(src, con["function"])
-        set  = parse!(src, con["set"])
-        # if MOI.canaddconstraint(dest, func, set)
-            c = MOI.addconstraint!(dest, func, set)
-            tryset!(dest, con, c, MOI.ConstraintName(), "name")
-            tryset!(dest, con, c, MOI.ConstraintPrimalStart(), "ConstraintPrimalStart")
-            tryset!(dest, con, c, MOI.ConstraintDualStart(), "ConstraintDualStart")
-        # else
-            # error("Unable to add the constraint of type ($(con["function"]["head"]), $(con["set"]["head"]))")
-        # end
+
+    objfunc = MOI.get(src, MOI.ObjectiveFunction())
+    objfunc = rereference!(objfunc, variablemap)
+    MOI.set!(dest, MOI.ObjectiveFunction(), objfunc)
+
+    # ============
+    #   Until a better way to reference constraints is found
+    revconstrmap = Dict{Int, UInt64}()
+    for (uid, row) in src.constrmap
+        revconstrmap[row] = uid
+    end
+    # ============
+    for (i, con) in enumerate(src["constraints"])
+        # ============
+        #   Find a way to loop through constraint references
+        _f  = parse!(src, con["function"])
+        _s  = parse!(src, con["set"])
+        (F, S) = (typeof(_f), typeof(_s))
+        srcc = MOI.ConstraintReference{F,S}(revconstrmap[i])
+        # ============
+
+        func = MOI.get(src, MOI.ConstraintFunction(), srcc)
+        func = rereference!(func, variablemap)
+        set  = MOI.get(src, MOI.ConstraintSet(), srcc)
+
+        if !MOI.canaddconstraint(dest, func, set)
+            error("Unable to add the constraint of type ($(F), $(S))")
+        end
+
+        destc = MOI.addconstraint!(dest, func, set)
+        getset!(dest, destc, src, srcc, MOI.ConstraintName())
+        getset!(dest, destc, src, srcc, MOI.ConstraintPrimalStart())
+        getset!(dest, destc, src, srcc, MOI.ConstraintDualStart())
     end
     dest
 end

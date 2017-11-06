@@ -5,9 +5,7 @@ function MOI.addconstraint!(m::MOFInstance, func::F, set::S) where F<:MOI.Abstra
         Object(
             "name"     => "c$(idx)",
             "set"      => object(set),
-            "function" =>  object!(m, func),
-            # "ConstraintPrimalStart" => NaN,
-            # "ConstraintDualStart" => NaN,
+            "function" =>  object!(m, func)
         )
     )
     m.constrmap[UInt64(idx)] = length(m["constraints"])
