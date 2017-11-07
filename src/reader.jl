@@ -116,7 +116,7 @@ function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
         set  = MOI.get(src, MOI.ConstraintSet(), srcc)
 
         if !MOI.canaddconstraint(dest, func, set)
-            error("Unable to add the constraint of type ($(F), $(S))")
+            error("Unable to add the constraint of type ($(typeof(func)), $(typeof(set)))")
         end
 
         destc = MOI.addconstraint!(dest, func, set)
