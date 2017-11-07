@@ -78,6 +78,17 @@ function rereference!(f::Union{
     f
 end
 
+function MOI.get(m::MOFInstance, ::Type{MOI.ListOfConstraintReferences})
+    c = Vector{MOI.ConstraintReference}(length(m["constraints"]))
+    for (uid, row) in m.constrmap
+        con = m["constraints"][row]
+        (F, S) = (functiontype!(m, con["function"]), settype!(m, con["set"]))
+         c[row] = MOI.ConstraintReference{F,S}(uid)
+    end
+    c
+end
+MOI.canget(m::MOFInstance, ::Type{MOI.ListOfConstraintReferences}) = true
+
 function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
     numvar = MOI.get(src, MOI.NumberOfVariables())
     destv = MOI.addvariables!(dest, numvar)
@@ -97,21 +108,9 @@ function MOI.copy!(dest::MOI.AbstractInstance, src::MOFInstance)
     MOI.set!(dest, MOI.ObjectiveFunction(), objfunc)
 
     # ============
-    #   Until a better way to reference constraints is found
-    revconstrmap = Dict{Int, UInt64}()
-    for (uid, row) in src.constrmap
-        revconstrmap[row] = uid
-    end
+    #   Find a way to loop through constraint references
     # ============
-    for (i, con) in enumerate(src["constraints"])
-        # ============
-        #   Find a way to loop through constraint references
-        _f  = parse!(src, con["function"])
-        _s  = parse!(src, con["set"])
-        (F, S) = (typeof(_f), typeof(_s))
-        srcc = MOI.ConstraintReference{F,S}(revconstrmap[i])
-        # ============
-
+    for srcc in MOI.get(src, MOI.ListOfConstraintReferences)
         func = MOI.get(src, MOI.ConstraintFunction(), srcc)
         func = rereference!(func, variablemap)
         set  = MOI.get(src, MOI.ConstraintSet(), srcc)
@@ -230,3 +229,6 @@ parse!(::Val{:PowerCone}, m, set)                        = MOI.PowerCone(floatif
 parse!(::Val{:DualPowerCone}, m, set)                    = MOI.DualPowerCone(floatify(set["exponent"]))
 parse!(::Val{:PositiveSemidefiniteConeTriangle}, m, set) = MOI.PositiveSemidefiniteConeTriangle(set["dimension"])
 parse!(::Val{:PositiveSemidefiniteConeScaled}, m, set)   = MOI.PositiveSemidefiniteConeScaled(set["dimension"])
+
+settype!(m::MOFInstance, set::Object) = typeof(parse!(m, set))
+functiontype!(m::MOFInstance, func::Object) = typeof(parse!(m, func))
