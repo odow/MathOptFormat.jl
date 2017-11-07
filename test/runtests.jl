@@ -23,7 +23,7 @@ problempath(prob::String) = joinpath(@__DIR__, "problems", prob)
     @test MOF.floatify(1) == 1.0
 end
 
-@testset "MOFInstanc" begin
+@testset "MOFInstance" begin
 
     @testset "JSON.json(::MOFInstance)" begin
         instance = MOF.MOFInstance()
@@ -264,9 +264,13 @@ end
         @test MOI.get(instance, MOI.VariablePrimalStart(), x) == 1.0
         @test MOI.canget(instance, MOI.VariableName(), x)
         @test MOI.get(instance, MOI.VariableName(), x) == "x1"
-
+        @test MOI.canget(instance, MOI.VariableReference, "x1")
+        @test MOI.get(instance, MOI.VariableReference, "x1") == x
         @test MOI.canset(instance, MOI.VariableName(), x)
         MOI.set!(instance, MOI.VariableName(), x, "y")
+        @test MOI.canget(instance, MOI.VariableReference, "y")
+        @test MOI.canget(instance, MOI.VariableReference, "x1") == false
+        @test MOI.get(instance, MOI.VariableReference, "y") == x
 
         @test MOI.canget(instance, MOI.ConstraintName(), c1)
         @test MOI.get(instance, MOI.ConstraintName(), c1) == "c1"

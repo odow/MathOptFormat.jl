@@ -1,7 +1,10 @@
-# MOI.get(m::MOFInstance, ::Type{MOI.VariableReference}, name::String)
+function MOI.get(m::MOFInstance, ::Type{MOI.VariableReference}, name::String)
+    m.namemap[name]
+end
+MOI.canget(m::MOFInstance, ::Type{MOI.VariableReference}, name::String) = haskey(m.namemap, name)
+
 # MOI.get(m::MOFInstance, ::Type{MOI.ConstraintReference}, name::String)
 # MOI.get(m::AbstractInstance, ::Type{ConstraintReference{F,S}}, name::String) where {F<:AbstractFunction,S<:AbstractSet}
-# MOI.canget(m::MOFInstance, ::Type{MOI.VariableReference}, name::String)
 # MOI.canget(m::MOFInstance, ::Type{MOI.ConstraintReference}, name::String)
 # MOI.canget(m::AbstractInstance, ::Type{ConstraintReference{F,S}}, name::String) where {F<:AbstractFunction,S<:AbstractSet}
 
