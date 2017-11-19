@@ -62,16 +62,4 @@ include("constraints.jl")
 include("attributes.jl")
 include("reader.jl")
 
-function MOI.supportsproblem(m::MOFInstance, obj, constraints::Vector)
-    if !Base.method_exists(object!, (MOFInstance, obj))
-        return false
-    end
-    for (f, s) in constraints
-        if !(Base.method_exists(object!, (MOFInstance, f)) && Base.method_exists(object, (s,)))
-            return false
-        end
-    end
-    return true
-end
-
 end # module

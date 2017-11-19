@@ -40,10 +40,6 @@ end
         rm(problempath("test.mof.json"))
     end
 
-    instance = MOF.MOFInstance()
-    @test !MOI.supportsproblem(instance, MOI.Integer, [])
-    @test !MOI.supportsproblem(instance, MOI.ScalarAffineFunction{Float64}, [(MOI.SingleVariable, MOI.SingleVariable)])
-
 end
 
 @testset "Sets" begin
@@ -135,15 +131,6 @@ end
         # min 1x + 2x + 3
         # s.t        x >= 3
         instance = MOF.MOFInstance()
-
-        @test MOI.supportsproblem(instance, MOI.ScalarAffineFunction{Float64}, [
-            (MOI.ScalarAffineFunction{Float64}, MOI.GreaterThan{Float64}),
-            (MOI.SingleVariable, MOI.Semicontinuous{Float64}),
-            (MOI.SingleVariable, MOI.Semiinteger{Float64}),
-            (MOI.SingleVariable, MOI.Integer)
-        ])
-
-
         v = MOI.addvariable!(instance)
         f = MOI.ScalarAffineFunction([v, v], [1.0, 2.0], 3.0)
         MOI.set!(instance, MOI.ObjectiveFunction(),f)
