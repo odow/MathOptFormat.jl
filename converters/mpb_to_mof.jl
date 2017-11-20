@@ -5,9 +5,12 @@ const MOI = MathOptFormat.MathOptInterface
 const MOF = MathOptFormat
 
 function LPtoMOF(inputfile::String, outputfile::String)
-    (A, collb, colub, c, rowlb, rowub, sense, colcat, sos, Q, modelname,
-        colnames, rownames) = LPWriter.readlp(inputfile)
+    instance = MPBtoMOF(LPWriter.read(inputfile)...)
+    MOI.write(instance, outputfile, 1)
+end
 
+function MPBtoMOF(A, collb, colub, c, rowlb, rowub, sense, colcat, sos, Q, modelname,
+    colnames, rownames)
     instance = MOF.MOFInstance()
     v = MOI.addvariables!(instance, length(c))
     for (ref, name) in zip(v, colnames)
@@ -98,13 +101,10 @@ function LPtoMOF(inputfile::String, outputfile::String)
         end
     end
 
-    #=
-        Save the file
-    =#
-    MOI.write(instance, outputfile, 1)
+    return instance
 end
 
-LPtoMOF(
-    joinpath(Pkg.dir("LPWriter"), "test", "model2.lp"),
-    joinpath(@__DIR__, "model2.mof.json")
-)
+# LPtoMOF(
+#     joinpath(Pkg.dir("LPWriter"), "test", "model2.lp"),
+#     joinpath(@__DIR__, "model2.mof.json")
+# )
