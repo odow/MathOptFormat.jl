@@ -8,15 +8,19 @@ function LPtoMOF(inputfile::String, outputfile::String)
     (A, collb, colub, c, rowlb, rowub, sense, colcat, sos, Q, modelname,
         colnames, rownames) = LPWriter.readlp(inputfile)
 
-    m = MOF.MOFInstance()
-    v = MOI.addvariables!(m, length(c), colnames)
+    instance = MOF.MOFInstance()
+    v = MOI.addvariables!(instance, length(c))
+    for (ref, name) in zip(v, colnames)
+        MOI.set!(instance, MOI.VariableName(), ref, name)
+    end
 
     #=
         Objective
     =#
     objsense = sense == :Min?MOI.MinSense:MOI.MaxSense
+    MOI.set!(instance, MOI.ObjectiveSense(), objsense)
     if length(nonzeros(Q)) == 0 # linear objective
-        MOI.setobjective!(m, objsense, MOI.ScalarAffineFunction(v, c, 0.0))
+        MOI.set!(instance, MOI.ObjectiveFunction(), MOI.ScalarAffineFunction(v, c, 0.0))
     else
         cols = zeros(Int, length(Q.nzval))
         col = 1
@@ -26,7 +30,7 @@ function LPtoMOF(inputfile::String, outputfile::String)
             end
             cols[i] = col
         end
-        MOI.setobjective!(m, objsense, MOI.ScalarQuadraticFunction(v, c, v[rowvals(Q)], cols, nonzeros(Q), 0.0))
+        MOI.set!(instance, MOI.ObjectiveFunction(), MOI.ScalarQuadraticFunction(v, c, v[rowvals(Q)], cols, nonzeros(Q), 0.0))
     end
 
     #=
@@ -47,7 +51,8 @@ function LPtoMOF(inputfile::String, outputfile::String)
         end
         idx = [i for i  in nzrange(At, row)]
         func = MOI.ScalarAffineFunction(v[Acv[idx]], Anz[idx], 0.0)
-        MOI.addconstraint!(m, func, set, rownames[row])
+        cref = MOI.addconstraint!(instance, func, set)
+        MOI.set!(instance, MOI.ConstraintName(), cref, rownames[row])
     end
 
     #=
@@ -57,13 +62,13 @@ function LPtoMOF(inputfile::String, outputfile::String)
         if lb != -Inf
             if ub != Inf
                 # interval
-                MOI.addconstraint!(m, v[i], MOI.Interval(lb, ub))
+                MOI.addconstraint!(instance, v[i], MOI.Interval(lb, ub))
             else
-                MOI.addconstraint!(m, v[i], MOI.GreaterThan(lb))
+                MOI.addconstraint!(instance, v[i], MOI.GreaterThan(lb))
             end
         else
             if ub != Inf
-                MOI.addconstraint!(m, v[i], MOI.LessThan(ub))
+                MOI.addconstraint!(instance, v[i], MOI.LessThan(ub))
             else
                 # free variable
             end
@@ -76,9 +81,9 @@ function LPtoMOF(inputfile::String, outputfile::String)
     for (i, cat) in enumerate(colcat)
         if cat == :Cont
         elseif cat == :Bin
-            MOI.addconstraint!(m, v[i], MOI.ZeroOne())
+            MOI.addconstraint!(instance, v[i], MOI.ZeroOne())
         elseif cat == :Int
-            MOI.addconstraint!(m, v[i], MOI.Integer())
+            MOI.addconstraint!(instance, v[i], MOI.Integer())
         end
     end
 
@@ -86,17 +91,17 @@ function LPtoMOF(inputfile::String, outputfile::String)
         Handle Special Ordered Sets
     =#
     for s in sos
-        if s.order == 1
-            MOI.addconstraint!(m, v[s.indices], MOI.SOS1(s.weights))
+        if s[1] == 1
+            MOI.addconstraint!(instance, v[s[2]], MOI.SOS1(s[3]))
         elseif s.order == 2
-            MOI.addconstraint!(m, v[s.indices], MOI.SOS2(s.weights))
+            MOI.addconstraint!(instance, v[s[2]], MOI.SOS2(s[3]))
         end
     end
 
     #=
         Save the file
     =#
-    MOF.save(outputfile, m, 1)
+    MOI.write(instance, outputfile, 1)
 end
 
 LPtoMOF(
