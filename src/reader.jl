@@ -40,12 +40,6 @@ function MOI.read!(m::MOFInstance, file::String)
     MOI.copy!(m, src)
 end
 
-function tryset!(dest, dict, ref, attr, str)
-    if haskey(dict, str) && MOI.canset(dest, attr, ref)
-        MOI.set!(dest, attr, ref, dict[str])
-    end
-end
-
 function getset!(dest, destref, src, srcref, attr)
     if MOI.canget(src, attr, srcref) && MOI.canset(dest, attr, destref)
         MOI.set!(dest, attr, destref, MOI.get(src, attr, srcref))

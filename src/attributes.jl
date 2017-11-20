@@ -1,3 +1,31 @@
+# TODO: improve efficiency
+function MOI.get(m::MOFInstance, ::MOI.ListOfConstraintReferences{F,S}) where F where S
+    c = MOI.ConstraintReference{F,S}[]
+    for (uid, row) in m.constrmap
+        con = m["constraints"][row]
+        (xF, xS) = (functiontype!(m, con["function"]), settype!(m, con["set"]))
+        if xF==F && xS == S
+            push!(c, MOI.ConstraintReference{F,S}(uid))
+        end
+    end
+    c
+end
+MOI.canget(m::MOFInstance, ::MOI.ListOfConstraintReferences{F,S}) where F where S = true
+
+# TODO: improve efficiency
+function MOI.get(m::MOFInstance, ::MOI.ListOfConstraints)
+    c = Tuple{Type{MOI.AbstractFunction}, Type{MOI.AbstractSet}}[]
+    for (uid, row) in m.constrmap
+        con = m["constraints"][row]
+        (F, S) = (functiontype!(m, con["function"]), settype!(m, con["set"]))
+        if !((F, S) in c)
+            push!(c,(F, S))
+        end
+    end
+    c
+end
+MOI.canget(m::MOFInstance, ::Type{MOI.ListOfConstraintReferences{F,S}}) where F where S = true
+
 function MOI.get(m::MOFInstance, ::Type{MOI.VariableReference}, name::String)
     m.namemap[name]
 end

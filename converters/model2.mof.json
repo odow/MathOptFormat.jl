@@ -2,14 +2,30 @@
  "version": "0.0",
  "sense": "min",
  "variables": [
-  "V5",
-  "V4",
-  "V1",
-  "V2",
-  "V3",
-  "V7",
-  "V6",
-  "V8"
+  {
+   "name": "V5"
+  },
+  {
+   "name": "V4"
+  },
+  {
+   "name": "V1"
+  },
+  {
+   "name": "V2"
+  },
+  {
+   "name": "V3"
+  },
+  {
+   "name": "V7"
+  },
+  {
+   "name": "V6"
+  },
+  {
+   "name": "V8"
+  }
  ],
  "objective": {
   "head": "ScalarAffineFunction",
