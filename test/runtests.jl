@@ -78,6 +78,111 @@ end
             c1: x in Integer()
         """, ["x"], ["c1"])
     end
+    @testset "scalarquadratic-objective" begin
+        test_model_equality("""
+            variables: x
+            minobjective: 1.0*x*x + -2.0x + 1.0
+        """, ["x"], String[])
+    end
+    @testset "SOS1" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in SOS1([1.0, 2.0, 3.0])
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "SOS2" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in SOS2([1.0, 2.0, 3.0])
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "Reals" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in Reals(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "Zeros" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in Zeros(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "Nonnegatives" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in Nonnegatives(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "Nonpositives" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in Nonpositives(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "PowerCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in PowerCone(2.0)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "DualPowerCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in DualPowerCone(0.5)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "vectoraffine-in-zeros" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [1.0x + -3.0, 2.0y + -4.0] in Zeros(2)
+        """, ["x", "y"], ["c1"])
+    end
+    @testset "vectorquadratic-in-nonnegatives" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [1.0*x*x + -2.0x + 1.0, 2.0y + -4.0] in Nonnegatives(2)
+        """, ["x", "y"], ["c1"])
+    end
+    @testset "ExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in ExponentialCone()
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "DualExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in DualExponentialCone()
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "SecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in SecondOrderCone(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "RotatedSecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in RotatedSecondOrderCone(3)
+        """, ["x", "y", "z"], ["c1"])
+    end
+
     # Clean up
     sleep(1.0)  # allow time for unlink to happen
     rm("test.mof.json", force=true)

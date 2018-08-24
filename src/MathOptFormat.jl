@@ -12,17 +12,17 @@ const MOIU = MOI.Utilities
 
 MOIU.@model(MOFModel,
     (ZeroOne, Integer),
-    (EqualTo, GreaterThan, LessThan, Interval),  #, Semicontinuous, Semiinteger),
-    (),  #(Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone,
-        # RotatedSecondOrderCone, GeometricMeanCone, ExponentialCone,
-        # DualExponentialCone, PositiveSemidefiniteConeTriangle,
-        # PositiveSemidefiniteConeSquare, RootDetConeTriangle, RootDetConeSquare,
-        # LogDetConeTriangle, LogDetConeSquare),
-    (),  # (PowerCone, DualPowerCone, SOS1, SOS2),
+    (EqualTo, GreaterThan, LessThan, Interval, Semicontinuous, Semiinteger),
+    (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone,
+        RotatedSecondOrderCone, GeometricMeanCone, RootDetConeTriangle,
+        RootDetConeSquare, LogDetConeTriangle, LogDetConeSquare,
+        PositiveSemidefiniteConeTriangle, PositiveSemidefiniteConeSquare,
+        ExponentialCone, DualExponentialCone),
+    (PowerCone, DualPowerCone, SOS1, SOS2),
     (SingleVariable,),
-    (ScalarAffineFunction,),  # ScalarQuadraticFunction),
-    (),  #(VectorOfVariables,),
-    (),  #(VectorAffineFunction, VectorQuadraticFunction)
+    (ScalarAffineFunction, ScalarQuadraticFunction),
+    (VectorOfVariables,),
+    (VectorAffineFunction, VectorQuadraticFunction)
 )
 
 include("read.jl")
