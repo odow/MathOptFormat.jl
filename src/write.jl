@@ -1,55 +1,57 @@
-function MOI.write(model::MOFModel, filename::String)
-    file = Object(
+function MOI.write_to_file(model::Model, filename::String)
+    object = Object(
         "name"        => "MathOptFormat Model",
         "version"     => VERSION,
         "variables"   => Object[],
         "objectives"  => Object[],
         "constraints" => Object[]
     )
-    name_map = write_variables(file, model)
-    write_objectives(file, model, name_map)
-    write_constraints(file, model, name_map)
+    name_map = write_variables(object, model)
+    write_objectives(object, model, name_map)
+    write_constraints(object, model, name_map)
     open(filename, "w") do io
-        Base.write(io, JSON.json(file, 2))
+        Base.write(io, JSON.json(object, 2))
     end
 end
 
-function write_variables(file, model)
+function write_variables(object::Object, model::Model)
     name_map = Dict{MOI.VariableIndex, String}()
     for index in MOI.get(model, MOI.ListOfVariableIndices())
-        variable = write(index, model)
+        variable = moi_to_object(index, model)
         name_map[index] = variable["name"]
-        push!(file["variables"], variable)
+        push!(object["variables"], variable)
     end
     return name_map
 end
 
-function write_objectives(file, model, name_map)
+function write_objectives(object::Object, model::Model,
+                          name_map::Dict{MOI.VariableIndex, String})
     sense = MOI.get(model, MOI.ObjectiveSense())
     objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
     objective_function = MOI.get(model, MOI.ObjectiveFunction{objective_type}())
-    push!(file["objectives"], Object(
-        "sense"    => write(sense),
-        "function" => write(objective_function, model, name_map)
+    push!(object["objectives"], Object(
+        "sense"    => moi_to_object(sense),
+        "function" => moi_to_object(objective_function, model, name_map)
     ))
 end
 
-function write_constraints(file, model, name_map)
+function write_constraints(object::Object, model::Model,
+                           name_map::Dict{MOI.VariableIndex, String})
     for (F, S) in MOI.get(model, MOI.ListOfConstraints())
         for index in MOI.get(model, MOI.ListOfConstraintIndices{F,S}())
-            push!(file["constraints"], write(index, model, name_map))
+            push!(object["constraints"], moi_to_object(index, model, name_map))
         end
     end
 end
 
 """
-    write(x, model::MOFModel)
+    moi_to_object(x, model::Model)
 
 Convert `x` into an OrderedDict representation.
 """
-function write end
+function moi_to_object end
 
-function write(index::MOI.VariableIndex, model::MOFModel)
+function moi_to_object(index::MOI.VariableIndex, model::Model)
     name = MOI.get(model, MOI.VariableName(), index)
     if name == ""
         name = "x$(index.value)"
@@ -57,17 +59,17 @@ function write(index::MOI.VariableIndex, model::MOFModel)
     return Object("name" => name)
 end
 
-function write(index::MOI.ConstraintIndex{F,S}, model::MOFModel,
+function moi_to_object(index::MOI.ConstraintIndex{F,S}, model::Model,
                    name_map::Dict{MOI.VariableIndex, String}) where {F, S}
     func = MOI.get(model, MOI.ConstraintFunction(), index)
     set = MOI.get(model, MOI.ConstraintSet(), index)
     name = MOI.get(model, MOI.ConstraintName(), index)
-    return Object("function" => write(func, model, name_map),
-                  "set"      => write(set, model, name_map),
+    return Object("function" => moi_to_object(func, model, name_map),
+                  "set"      => moi_to_object(set, model, name_map),
                   "name"     => name)
 end
 
-function write(sense::MOI.OptimizationSense)
+function moi_to_object(sense::MOI.OptimizationSense)
     if sense == MOI.MinSense
         return "min"
     elseif sense == MOI.MaxSense
@@ -80,7 +82,7 @@ end
 
 # ========== Non-typed scalar functions ==========
 
-function write(foo::MOI.SingleVariable, model::MOFModel,
+function moi_to_object(foo::MOI.SingleVariable, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "SingleVariable",
@@ -90,7 +92,7 @@ end
 
 # ========== Typed scalar functions ==========
 
-function write(foo::MOI.ScalarAffineTerm{Float64}, model::MOFModel,
+function moi_to_object(foo::MOI.ScalarAffineTerm{Float64}, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "ScalarAffineTerm",
@@ -99,16 +101,16 @@ function write(foo::MOI.ScalarAffineTerm{Float64}, model::MOFModel,
     )
 end
 
-function write(foo::MOI.ScalarAffineFunction{Float64}, model::MOFModel,
+function moi_to_object(foo::MOI.ScalarAffineFunction{Float64}, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "ScalarAffineFunction",
-        "terms" => write.(foo.terms, Ref(model), Ref(name_map)),
+        "terms" => moi_to_object.(foo.terms, Ref(model), Ref(name_map)),
         "constant" => foo.constant
     )
 end
 
-function write(foo::MOI.ScalarQuadraticTerm{Float64}, model::MOFModel,
+function moi_to_object(foo::MOI.ScalarQuadraticTerm{Float64}, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "ScalarQuadraticTerm",
@@ -118,19 +120,19 @@ function write(foo::MOI.ScalarQuadraticTerm{Float64}, model::MOFModel,
     )
 end
 
-function write(foo::MOI.ScalarQuadraticFunction{Float64}, model::MOFModel,
+function moi_to_object(foo::MOI.ScalarQuadraticFunction{Float64}, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "ScalarQuadraticFunction",
-        "affine_terms" => write.(foo.affine_terms, Ref(model), Ref(name_map)),
-        "quadratic_terms" => write.(foo.quadratic_terms, Ref(model), Ref(name_map)),
+        "affine_terms" => moi_to_object.(foo.affine_terms, Ref(model), Ref(name_map)),
+        "quadratic_terms" => moi_to_object.(foo.quadratic_terms, Ref(model), Ref(name_map)),
         "constant" => foo.constant
     )
 end
 
 # ========== Non-typed vector functions ==========
 
-function write(foo::MOI.VectorOfVariables, model::MOFModel,
+function moi_to_object(foo::MOI.VectorOfVariables, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "VectorOfVariables",
@@ -140,45 +142,64 @@ end
 
 # ========== Typed vector functions ==========
 
-function write(foo::MOI.VectorAffineTerm, model::MOFModel,
+function moi_to_object(foo::MOI.VectorAffineTerm, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "VectorAffineTerm",
         "output_index" => foo.output_index,
-        "scalar_term" => write(foo.scalar_term, model, name_map)
+        "scalar_term" => moi_to_object(foo.scalar_term, model, name_map)
     )
 end
 
-function write(foo::MOI.VectorAffineFunction, model::MOFModel,
+function moi_to_object(foo::MOI.VectorAffineFunction, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "VectorAffineFunction",
-        "terms" => write.(foo.terms, Ref(model), Ref(name_map)),
+        "terms" => moi_to_object.(foo.terms, Ref(model), Ref(name_map)),
         "constants" => foo.constants
     )
 end
 
-function write(foo::MOI.VectorQuadraticTerm, model::MOFModel,
+function moi_to_object(foo::MOI.VectorQuadraticTerm, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "VectorQuadraticTerm",
         "output_index" => foo.output_index,
-        "scalar_term" => write(foo.scalar_term, model, name_map)
+        "scalar_term" => moi_to_object(foo.scalar_term, model, name_map)
     )
 end
 
-function write(foo::MOI.VectorQuadraticFunction, model::MOFModel,
+function moi_to_object(foo::MOI.VectorQuadraticFunction, model::Model,
                    name_map::Dict{MOI.VariableIndex, String})
     return Object(
         "head" => "VectorQuadraticFunction",
-        "affine_terms" => write.(foo.affine_terms, Ref(model), Ref(name_map)),
-        "quadratic_terms" => write.(foo.quadratic_terms, Ref(model), Ref(name_map)),
+        "affine_terms" => moi_to_object.(foo.affine_terms, Ref(model), Ref(name_map)),
+        "quadratic_terms" => moi_to_object.(foo.quadratic_terms, Ref(model), Ref(name_map)),
         "constants" => foo.constants
     )
 end
 
 # ========== Default fallback ==========
-head_name(S) = error("MathOptFormat does not support the set $(S).")
+"""
+    head_name(::Type{SetType}) where SetType <: MOI.AbstractSet
+
+Return the string that is stored in the `"head"` field of the MOF object for a
+set of type `SetType`.
+"""
+function head_name(::Type{SetType}) where SetType <: MOI.AbstractSet
+    error("Version $(VERSION) of MathOptFormat does not support the set " *
+          "$(SetType).")
+end
+
+# Add every field as the field is named in MathOptInterface.
+function moi_to_object(set::SetType, model::Model,
+               name_map::Dict{MOI.VariableIndex, String}) where SetType
+    object = Object("head" => head_name(SetType))
+    for key in fieldnames(SetType)
+        object[string(key)] = getfield(set, key)
+    end
+    return object
+end
 
 # ========== Non-typed scalar sets ==========
 head_name(::Type{MOI.ZeroOne}) = "ZeroOne"
@@ -206,20 +227,15 @@ head_name(::Type{MOI.RootDetConeTriangle}) = "RootDetConeTriangle"
 head_name(::Type{MOI.RootDetConeSquare}) = "RootDetConeSquare"
 head_name(::Type{MOI.LogDetConeTriangle}) = "LogDetConeTriangle"
 head_name(::Type{MOI.LogDetConeSquare}) = "LogDetConeSquare"
-head_name(::Type{MOI.PositiveSemidefiniteConeTriangle}) = "PositiveSemidefiniteConeTriangle"
-head_name(::Type{MOI.PositiveSemidefiniteConeSquare}) = "PositiveSemidefiniteConeSquare"
+function head_name(::Type{MOI.PositiveSemidefiniteConeTriangle})
+    return "PositiveSemidefiniteConeTriangle"
+end
+function head_name(::Type{MOI.PositiveSemidefiniteConeSquare})
+    return "PositiveSemidefiniteConeSquare"
+end
 
 # ========== Typed vector sets ==========
 head_name(::Type{<:MOI.PowerCone}) = "PowerCone"
 head_name(::Type{<:MOI.DualPowerCone}) = "DualPowerCone"
 head_name(::Type{<:MOI.SOS1}) = "SOS1"
 head_name(::Type{<:MOI.SOS2}) = "SOS2"
-
-function write(set::S, model::MOFModel,
-               name_map::Dict{MOI.VariableIndex, String}) where S
-    object = Object("head" => head_name(S))
-    for key in fieldnames(S)
-        object[string(key)] = getfield(set, key)
-    end
-    return object
-end

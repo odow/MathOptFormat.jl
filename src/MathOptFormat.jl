@@ -10,7 +10,7 @@ const Object = OrderedDict{String, Any}
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
-MOIU.@model(MOFModel,
+MOIU.@model(Model,
     (ZeroOne, Integer),
     (EqualTo, GreaterThan, LessThan, Interval, Semicontinuous, Semiinteger),
     (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone,
@@ -24,6 +24,15 @@ MOIU.@model(MOFModel,
     (VectorOfVariables,),
     (VectorAffineFunction, VectorQuadraticFunction)
 )
+
+"""
+    Model()
+
+Create an empty instance of MathOptFormat.Model.
+"""
+function Model()
+    return Model{Float64}()
+end
 
 include("read.jl")
 include("write.jl")

@@ -352,7 +352,7 @@ more human-readable, better standardized, and more extensible.
 using MathOptFormat
 const MOI = MathOptFormat.MOI
 
-model = MathOptFormat.MOFModel{Float64}()
+model = MathOptFormat.Model{Float64}()
 
 # MOI.set(model, MathOptFormat.Author(), "Oscar Dowson")
 # MOI.set(model, MathOptFormat.Description(), "A simple example for the MathOptFormat documentation")

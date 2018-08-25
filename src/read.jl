@@ -1,52 +1,59 @@
-function MOI.read(filename::String)
-    model = MOFModel{Float64}()
-    file = open(filename, "r") do io
+function MOI.read_from_file(model::Model, filename::String)
+    if !MOI.isempty(model)
+        error("Cannot read model from file as destination model is not empty.")
+    end
+    object = open(filename, "r") do io
         JSON.parse(io; dicttype=Object)
     end
-    name_map = read_variables(file, model)
-    read_objectives(file, model, name_map)
-    read_constraints(file, model, name_map)
-    return model
+    name_map = read_variables(model, object)
+    read_objectives(model, object, name_map)
+    read_constraints(model, object, name_map)
+    return nothing
 end
 
-function read_variables(file, model)
-    indices = MOI.addvariables!(model, length(file["variables"]))
+function read_variables(model::Model, object::Object)
+    indices = MOI.add_variables(model, length(object["variables"]))
     name_map = Dict{String, MOI.VariableIndex}()
-    for (index, variable) in zip(indices, file["variables"])
+    for (index, variable) in zip(indices, object["variables"])
         name = variable["name"]
-        MOI.set!(model, MOI.VariableName(), index, name)
+        MOI.set(model, MOI.VariableName(), index, name)
         name_map[name] = index
     end
     return name_map
 end
 
-function read_objectives(file, model, name_map)
-    if length(file["objectives"]) > 1
+function read_objectives(model::Model, object::Object,
+                         name_map::Dict{String, MOI.VariableIndex})
+    if length(object["objectives"]) > 1
         error("Multi-objective models not supported.")
     end
-    objective = first(file["objectives"])
-    MOI.set!(model, MOI.ObjectiveSense(),
-             read_objective_sense(objective["sense"]))
+    objective = first(object["objectives"])
+    MOI.set(model, MOI.ObjectiveSense(),
+            read_objective_sense(objective["sense"]))
     objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
-    MOI.set!(model, MOI.ObjectiveFunction{objective_type}(),
-             read(objective["function"], model, name_map))
+    MOI.set(model, MOI.ObjectiveFunction{objective_type}(),
+            object_to_moi(objective["function"], model, name_map))
 end
 
-function read_constraints(file, model, name_map)
-    for constraint in file["constraints"]
-        foo = read(constraint["function"], model, name_map)
-        set = read(constraint["set"], model, name_map)
-        index = MOI.addconstraint!(model, foo, set)
-        MOI.set!(model, MOI.ConstraintName(), index, constraint["name"])
+function read_constraints(model::Model, object::Object,
+                          name_map::Dict{String, MOI.VariableIndex})
+    for constraint in object["constraints"]
+        foo = object_to_moi(constraint["function"], model, name_map)
+        set = object_to_moi(constraint["set"], model, name_map)
+        index = MOI.add_constraint(model, foo, set)
+        MOI.set(model, MOI.ConstraintName(), index, constraint["name"])
     end
 end
 
 """
-    read(x::OrderedDict, model::MOFModel)
+    object_to_moi(x::OrderedDict, model::Model)
 
 Convert `x` from an OrderedDict representation into a MOI representation.
 """
-read(x::Object, args...) = read(Val{Symbol(x["head"])}(), x, args...)
+function object_to_moi(x::Object, args...)
+    val_type = Val{Symbol(x["head"])}()
+    return object_to_moi(val_type, x, args...)
+end
 
 function read_objective_sense(sense::String)
     if sense == "min"
@@ -61,144 +68,101 @@ end
 
 # ========== Non-typed scalar functions ==========
 
-function read(::Val{:SingleVariable}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:SingleVariable}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.SingleVariable(name_map[object["variable"]])
 end
 
 # ========== Typed scalar functions ==========
 
-function read(::Val{:ScalarAffineTerm}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:ScalarAffineTerm}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.ScalarAffineTerm(
                 object["coefficient"],
                 name_map[object["variable_index"]])
 end
 
-function read(::Val{:ScalarAffineFunction}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:ScalarAffineFunction}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.ScalarAffineFunction(
-                read.(object["terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["terms"], Ref(model), Ref(name_map)),
                 object["constant"])
 end
 
-function read(::Val{:ScalarQuadraticTerm}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:ScalarQuadraticTerm}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.ScalarQuadraticTerm(
                 object["coefficient"],
                 name_map[object["variable_index_1"]],
                 name_map[object["variable_index_2"]])
 end
 
-function read(::Val{:ScalarQuadraticFunction}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:ScalarQuadraticFunction}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.ScalarQuadraticFunction(
-                read.(object["affine_terms"], Ref(model), Ref(name_map)),
-                read.(object["quadratic_terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["affine_terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["quadratic_terms"], Ref(model), Ref(name_map)),
                 object["constant"])
 end
 
 # ========== Non-typed vector functions ==========
 
-function read(::Val{:VectorOfVariables}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:VectorOfVariables}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.VectorOfVariables(
                 [name_map[variable] for variable in object["variables"]])
 end
 
 # ========== Typed vector functions ==========
 
-function read(::Val{:VectorAffineTerm}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:VectorAffineTerm}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.VectorAffineTerm(
                 object["output_index"],
-                read(object["scalar_term"], model, name_map))
+                object_to_moi(object["scalar_term"], model, name_map))
 end
 
-function read(::Val{:VectorAffineFunction}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:VectorAffineFunction}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.VectorAffineFunction(
-                read.(object["terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["terms"], Ref(model), Ref(name_map)),
                 Float64.(object["constants"]))
 end
 
-function read(::Val{:VectorQuadraticTerm}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:VectorQuadraticTerm}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.VectorQuadraticTerm(
                 object["output_index"],
-                read(object["scalar_term"], model, name_map))
+                object_to_moi(object["scalar_term"], model, name_map))
 end
 
-function read(::Val{:VectorQuadraticFunction}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
+function object_to_moi(::Val{:VectorQuadraticFunction}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
     return MOI.VectorQuadraticFunction(
-                read.(object["affine_terms"], Ref(model), Ref(name_map)),
-                read.(object["quadratic_terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["affine_terms"], Ref(model), Ref(name_map)),
+                object_to_moi.(object["quadratic_terms"], Ref(model), Ref(name_map)),
                 Float64.(object["constants"]))
 end
 
 # ========== Default fallback ==========
-set_type(S) = error("MathOptFormat does not support the set $(S).")
+"""
+    set_info(::Type{Val{HeadName}}) where HeadName
 
-# ========== Non-typed scalar sets ==========
-set_type(::Type{Val{:ZeroOne}}) = (MOI.ZeroOne,)
-set_type(::Type{Val{:Integer}}) = (MOI.Integer,)
+Return a tuple of the corresponding MOI set and an ordered list of fieldnames.
 
-# ========== Typed scalar sets ==========
-set_type(::Type{Val{:LessThan}}) = (MOI.LessThan, "upper")
-set_type(::Type{Val{:GreaterThan}}) = (MOI.GreaterThan, "lower")
-set_type(::Type{Val{:EqualTo}}) = (MOI.EqualTo, "value")
-set_type(::Type{Val{:Interval}}) = (MOI.Interval, "lower", "upper")
-set_type(::Type{Val{:Semiinteger}}) = (MOI.Semiinteger, "lower", "upper")
-set_type(::Type{Val{:Semicontinuous}}) = (MOI.Semicontinuous, "lower", "upper")
+`HeadName` is a symbol of the string returned by `head_name(set)`.
 
-# ========== Non-typed vector sets ==========
-set_type(::Type{Val{:Zeros}}) = (MOI.Zeros, "dimension")
-set_type(::Type{Val{:Reals}}) = (MOI.Reals, "dimension")
-set_type(::Type{Val{:Nonnegatives}}) = (MOI.Nonnegatives, "dimension")
-set_type(::Type{Val{:Nonpositives}}) = (MOI.Nonpositives, "dimension")
-set_type(::Type{Val{:SecondOrderCone}}) = (MOI.SecondOrderCone, "dimension")
-function set_type(::Type{Val{:RotatedSecondOrderCone}})
-    return MOI.RotatedSecondOrderCone, "dimension"
-end
-set_type(::Type{Val{:GeometricMeanCone}}) = (MOI.GeometricMeanCone, "dimension")
-function set_type(::Type{Val{:RootDetConeTriangle}})
-    return MOI.RootDetConeTriangle, "side_dimension"
-end
-function set_type(::Type{Val{:RootDetConeSquare}})
-    return MOI.RootDetConeSquare, "side_dimension"
-end
-function set_type(::Type{Val{:LogDetConeTriangle}})
-    return MOI.LogDetConeTriangle, "side_dimension"
-end
-function set_type(::Type{Val{:LogDetConeSquare}})
-    return MOI.LogDetConeSquare, "side_dimension"
-end
-function set_type(::Type{Val{:PositiveSemidefiniteConeTriangle}})
-    return MOI.PositiveSemidefiniteConeTriangle, "side_dimension"
-end
-function set_type(::Type{Val{:PositiveSemidefiniteConeSquare}})
-    return MOI.PositiveSemidefiniteConeSquare, "side_dimension"
-end
-set_type(::Type{Val{:ExponentialCone}}) = (MOI.ExponentialCone, )
-set_type(::Type{Val{:DualExponentialCone}}) = (MOI.DualExponentialCone, )
-
-# ========== Typed vector sets ==========
-set_type(::Type{Val{:PowerCone}}) = (MOI.PowerCone, "exponent")
-set_type(::Type{Val{:DualPowerCone}}) = (MOI.DualPowerCone, "exponent")
-
-function read(::Val{:SOS1}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
-    return MOI.SOS1(Float64.(object["weights"]))
-end
-function read(::Val{:SOS2}, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex})
-    return MOI.SOS2(Float64.(object["weights"]))
+    HeadName = Symbol(head_name(set))
+    typeof(set_info(Val{HeadName})[1]) == typeof(set)
+"""
+function set_info(::Type{Val{SetSymbol}}) where SetSymbol
+    error("Version $(VERSION) of MathOptFormat does not support the set " *
+          "$(SetType).")
 end
 
-function read(::S, object::Object, model::MOFModel,
-              name_map::Dict{String, MOI.VariableIndex}) where S
-    args = set_type(S)
+function object_to_moi(::Val{SetSymbol}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex}) where SetSymbol
+    args = set_info(Val{SetSymbol})
     SetType = args[1]
     if length(args) > 1
         return SetType([object[key] for key in args[2:end]]...)
@@ -206,3 +170,60 @@ function read(::S, object::Object, model::MOFModel,
         return SetType()
     end
 end
+
+function object_to_moi(::Val{:SOS1}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
+    return MOI.SOS1(Float64.(object["weights"]))
+end
+function object_to_moi(::Val{:SOS2}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
+    return MOI.SOS2(Float64.(object["weights"]))
+end
+
+
+# ========== Non-typed scalar sets ==========
+set_info(::Type{Val{:ZeroOne}}) = (MOI.ZeroOne,)
+set_info(::Type{Val{:Integer}}) = (MOI.Integer,)
+
+# ========== Typed scalar sets ==========
+set_info(::Type{Val{:LessThan}}) = (MOI.LessThan, "upper")
+set_info(::Type{Val{:GreaterThan}}) = (MOI.GreaterThan, "lower")
+set_info(::Type{Val{:EqualTo}}) = (MOI.EqualTo, "value")
+set_info(::Type{Val{:Interval}}) = (MOI.Interval, "lower", "upper")
+set_info(::Type{Val{:Semiinteger}}) = (MOI.Semiinteger, "lower", "upper")
+set_info(::Type{Val{:Semicontinuous}}) = (MOI.Semicontinuous, "lower", "upper")
+
+# ========== Non-typed vector sets ==========
+set_info(::Type{Val{:Zeros}}) = (MOI.Zeros, "dimension")
+set_info(::Type{Val{:Reals}}) = (MOI.Reals, "dimension")
+set_info(::Type{Val{:Nonnegatives}}) = (MOI.Nonnegatives, "dimension")
+set_info(::Type{Val{:Nonpositives}}) = (MOI.Nonpositives, "dimension")
+set_info(::Type{Val{:SecondOrderCone}}) = (MOI.SecondOrderCone, "dimension")
+function set_info(::Type{Val{:RotatedSecondOrderCone}})
+    return MOI.RotatedSecondOrderCone, "dimension"
+end
+set_info(::Type{Val{:GeometricMeanCone}}) = (MOI.GeometricMeanCone, "dimension")
+function set_info(::Type{Val{:RootDetConeTriangle}})
+    return MOI.RootDetConeTriangle, "side_dimension"
+end
+function set_info(::Type{Val{:RootDetConeSquare}})
+    return MOI.RootDetConeSquare, "side_dimension"
+end
+function set_info(::Type{Val{:LogDetConeTriangle}})
+    return MOI.LogDetConeTriangle, "side_dimension"
+end
+function set_info(::Type{Val{:LogDetConeSquare}})
+    return MOI.LogDetConeSquare, "side_dimension"
+end
+function set_info(::Type{Val{:PositiveSemidefiniteConeTriangle}})
+    return MOI.PositiveSemidefiniteConeTriangle, "side_dimension"
+end
+function set_info(::Type{Val{:PositiveSemidefiniteConeSquare}})
+    return MOI.PositiveSemidefiniteConeSquare, "side_dimension"
+end
+set_info(::Type{Val{:ExponentialCone}}) = (MOI.ExponentialCone, )
+set_info(::Type{Val{:DualExponentialCone}}) = (MOI.DualExponentialCone, )
+
+# ========== Typed vector sets ==========
+set_info(::Type{Val{:PowerCone}}) = (MOI.PowerCone, "exponent")
+set_info(::Type{Val{:DualPowerCone}}) = (MOI.DualPowerCone, "exponent")

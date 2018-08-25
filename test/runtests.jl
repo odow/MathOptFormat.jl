@@ -4,10 +4,11 @@ const MOI = MathOptFormat.MOI
 const MOIU = MathOptFormat.MOIU
 
 function test_model_equality(model_string, variables, constraints)
-    model = MathOptFormat.MOFModel{Float64}()
+    model = MathOptFormat.Model()
     MOIU.loadfromstring!(model, model_string)
-    MOI.write(model, "test.mof.json")
-    model_2 = MOI.read("test.mof.json")
+    MOI.write_to_file(model, "test.mof.json")
+    model_2 = MathOptFormat.Model()
+    MOI.read_from_file(model_2, "test.mof.json")
     MOIU.test_models_equal(model, model_2, variables, constraints)
 end
 
