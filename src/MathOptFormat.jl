@@ -11,18 +11,21 @@ const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
 MOIU.@model(Model,
-    (ZeroOne, Integer),
-    (EqualTo, GreaterThan, LessThan, Interval, Semicontinuous, Semiinteger),
-    (Reals, Zeros, Nonnegatives, Nonpositives, SecondOrderCone,
-        RotatedSecondOrderCone, GeometricMeanCone, RootDetConeTriangle,
-        RootDetConeSquare, LogDetConeTriangle, LogDetConeSquare,
-        PositiveSemidefiniteConeTriangle, PositiveSemidefiniteConeSquare,
-        ExponentialCone, DualExponentialCone),
-    (PowerCone, DualPowerCone, SOS1, SOS2),
-    (SingleVariable,),
-    (ScalarAffineFunction, ScalarQuadraticFunction),
-    (VectorOfVariables,),
-    (VectorAffineFunction, VectorQuadraticFunction)
+    (MOI.ZeroOne, MOI.Integer),
+    (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval, 
+        MOI.Semicontinuous, MOI.Semiinteger),
+    (MOI.Reals, MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, 
+        MOI.SecondOrderCone, MOI.RotatedSecondOrderCone, 
+        MOI.GeometricMeanCone, 
+        MOI.RootDetConeTriangle, MOI.RootDetConeSquare,
+        MOI.LogDetConeTriangle, MOI.LogDetConeSquare,
+        MOI.PositiveSemidefiniteConeTriangle, MOI.PositiveSemidefiniteConeSquare,
+        MOI.ExponentialCone, MOI.DualExponentialCone),
+    (MOI.PowerCone, MOI.DualPowerCone, MOI.SOS1, MOI.SOS2),
+    (MOI.SingleVariable,),
+    (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
+    (MOI.VectorOfVariables,),
+    (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)
 )
 
 """
