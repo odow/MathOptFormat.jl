@@ -3,6 +3,9 @@ using MathOptFormat, Compat.Test
 const MOI = MathOptFormat.MOI
 const MOIU = MathOptFormat.MOIU
 
+struct UnsupportedSet <: MOI.AbstractSet end
+struct UnsupportedFunction <: MOI.AbstractFunction end
+
 function test_model_equality(model_string, variables, constraints)
     model = MathOptFormat.Model()
     MOIU.loadfromstring!(model, model_string)
@@ -12,7 +15,37 @@ function test_model_equality(model_string, variables, constraints)
     MOIU.test_models_equal(model, model_2, variables, constraints)
 end
 
+function test_unsupported_set()
+    model = MathOptFormat.Model()
+    x = MOI.add_variable(model)
+    @test_throws Exception MOI.add_constraint(model, MOI.SingleVariable(x),
+                                              UnsupportedSet())
+end
+
+function test_unsupported_function()
+    model = MathOptFormat.Model()
+    x = MOI.add_variable(model)
+    @test_throws Exception MOI.add_constraint(model, MOI.UnsupportedFunction(),
+                                              MOI.ZeroOne())
+end
+
+@testset "Error handling" begin
+    @testset "UnsupportedSet" begin
+        test_unsupported_set()
+    end
+    @testset "UnsupportedFunction" begin
+        test_unsupported_function()
+    end
+end
+
 @testset "round trips" begin
+    @testset "Empty model" begin
+        model = MathOptFormat.Model()
+        MOI.write_to_file(model, "test.mof.json")
+        model_2 = MathOptFormat.Model()
+        MOI.read_from_file(model_2, "test.mof.json")
+        MOIU.test_models_equal(model, model_2, String[], String[])
+    end
     @testset "min objective" begin
         test_model_equality("""
             variables: x
@@ -79,6 +112,20 @@ end
             c1: x in Integer()
         """, ["x"], ["c1"])
     end
+    @testset "singlevariable-in-Semicontinuous" begin
+        test_model_equality("""
+            variables: x
+            minobjective: 1.2x + 0.5
+            c1: x in Semicontinuous(1.0, 2.0)
+        """, ["x"], ["c1"])
+    end
+    @testset "singlevariable-in-Semiinteger" begin
+        test_model_equality("""
+            variables: x
+            minobjective: 1.2x + 0.5
+            c1: x in Semiinteger(1.0, 2.0)
+        """, ["x"], ["c1"])
+    end
     @testset "scalarquadratic-objective" begin
         test_model_equality("""
             variables: x
@@ -139,6 +186,13 @@ end
             variables: x, y, z
             minobjective: x
             c1: [x, y, z] in DualPowerCone(0.5)
+        """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "GeometricMeanCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in GeometricMeanCone(3)
         """, ["x", "y", "z"], ["c1"])
     end
     @testset "vectoraffine-in-zeros" begin

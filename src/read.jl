@@ -55,6 +55,20 @@ function object_to_moi(x::Object, args...)
     return object_to_moi(val_type, x, args...)
 end
 
+"""
+    parse_vector_or_default(terms, default_type, model::Model, name_map)
+
+Try converting each term in `terms` to a MOI representation, otherwise return an
+empty vector with eltype `default_type`.
+"""
+function parse_vector_or_default(terms, default_type, model::Model, name_map)
+    if length(terms) == 0
+        return default_type[]
+    else
+        return object_to_moi.(terms, Ref(model), Ref(name_map))
+    end
+end
+
 function read_objective_sense(sense::String)
     if sense == "min"
         return MOI.MinSense
@@ -84,9 +98,10 @@ end
 
 function object_to_moi(::Val{:ScalarAffineFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-    return MOI.ScalarAffineFunction(
-                object_to_moi.(object["terms"], Ref(model), Ref(name_map)),
-                object["constant"])
+    terms = parse_vector_or_default(object["terms"],
+                                    MOI.ScalarAffineTerm{Float64},
+                                    model, name_map)
+    return MOI.ScalarAffineFunction(terms, object["constant"])
 end
 
 function object_to_moi(::Val{:ScalarQuadraticTerm}, object::Object, model::Model,
@@ -99,10 +114,12 @@ end
 
 function object_to_moi(::Val{:ScalarQuadraticFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-    return MOI.ScalarQuadraticFunction(
-                object_to_moi.(object["affine_terms"], Ref(model), Ref(name_map)),
-                object_to_moi.(object["quadratic_terms"], Ref(model), Ref(name_map)),
-                object["constant"])
+   affine_terms = parse_vector_or_default(object["affine_terms"],
+                       MOI.ScalarAffineTerm{Float64}, model, name_map)
+   quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
+                       MOI.ScalarQuadraticTerm{Float64}, model, name_map)
+    return MOI.ScalarQuadraticFunction(affine_terms, quadratic_terms,
+                                       object["constant"])
 end
 
 # ========== Non-typed vector functions ==========
@@ -124,9 +141,9 @@ end
 
 function object_to_moi(::Val{:VectorAffineFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-    return MOI.VectorAffineFunction(
-                object_to_moi.(object["terms"], Ref(model), Ref(name_map)),
-                Float64.(object["constants"]))
+   terms = parse_vector_or_default(object["terms"],
+               MOI.VectorAffineTerm{Float64}, model, name_map)
+    return MOI.VectorAffineFunction(terms, Float64.(object["constants"]))
 end
 
 function object_to_moi(::Val{:VectorQuadraticTerm}, object::Object, model::Model,
@@ -138,10 +155,12 @@ end
 
 function object_to_moi(::Val{:VectorQuadraticFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-    return MOI.VectorQuadraticFunction(
-                object_to_moi.(object["affine_terms"], Ref(model), Ref(name_map)),
-                object_to_moi.(object["quadratic_terms"], Ref(model), Ref(name_map)),
-                Float64.(object["constants"]))
+   affine_terms = parse_vector_or_default(object["affine_terms"],
+                       MOI.VectorAffineTerm{Float64}, model, name_map)
+   quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
+                         MOI.VectorQuadraticTerm{Float64}, model, name_map)
+    return MOI.VectorQuadraticFunction(affine_terms, quadratic_terms,
+                                       Float64.(object["constants"]))
 end
 
 # ========== Default fallback ==========
