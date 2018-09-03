@@ -15,26 +15,22 @@ function test_model_equality(model_string, variables, constraints)
     MOIU.test_models_equal(model, model_2, variables, constraints)
 end
 
-function test_unsupported_set()
-    model = MathOptFormat.Model()
-    x = MOI.add_variable(model)
-    @test_throws Exception MOI.add_constraint(model, MOI.SingleVariable(x),
-                                              UnsupportedSet())
-end
-
-function test_unsupported_function()
-    model = MathOptFormat.Model()
-    x = MOI.add_variable(model)
-    @test_throws Exception MOI.add_constraint(model, MOI.UnsupportedFunction(),
-                                              MOI.ZeroOne())
-end
-
-@testset "Error handling" begin
-    @testset "UnsupportedSet" begin
-        test_unsupported_set()
+@testset "Error handling: read_from_file" begin
+    @testset "unsupported_constraint_set" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/unsupported_constraint_set.mof.json")
     end
-    @testset "UnsupportedFunction" begin
-        test_unsupported_function()
+    @testset "unsupported_constraint_function" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/unsupported_constraint_function.mof.json")
+    end
+    @testset "unsupported_objective_function" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/unsupported_objective_function.mof.json")
+    end
+    @testset "unsupported_objective_sense" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/unsupported_objective_sense.mof.json")
     end
 end
 
