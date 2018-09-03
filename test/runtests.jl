@@ -254,7 +254,7 @@ end
     @testset "PositiveSemidefiniteConeTriangle" begin
         test_model_equality("""
             variables: x1, x2, x3
-            minobjective: x
+            minobjective: x1
             c1: [x1, x2, x3] in PositiveSemidefiniteConeTriangle(2)
         """, ["x1", "x2", "x3"], ["c1"])
     end
@@ -268,9 +268,9 @@ end
     @testset "LogDetConeTriangle" begin
         test_model_equality("""
             variables: t, x1, x2, x3
-            minobjective: x
+            minobjective: x1
             c1: [t, x1, x2, x3] in LogDetConeTriangle(2)
-        """, ["t", "x1", "x2", "x3", "z"], ["c1"])
+        """, ["t", "x1", "x2", "x3"], ["c1"])
     end
     @testset "LogDetConeSquare" begin
         test_model_equality("""
@@ -282,9 +282,9 @@ end
     @testset "RootDetConeTriangle" begin
         test_model_equality("""
             variables: t, x1, x2, x3
-            minobjective: x
+            minobjective: x1
             c1: [t, x1, x2, x3] in RootDetConeTriangle(2)
-        """, ["t", "x1", "x2", "x3", "z"], ["c1"])
+        """, ["t", "x1", "x2", "x3"], ["c1"])
     end
     @testset "RootDetConeSquare" begin
         test_model_equality("""
