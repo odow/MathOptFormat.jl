@@ -9,5 +9,9 @@ notifications:
   email: false
 git:
   depth: 99999999
+branches:
+  only:
+    - master
+    - /^release-.*$/
 after_success:
   - julia -e 'cd(Pkg.dir("MathOptFormat")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
