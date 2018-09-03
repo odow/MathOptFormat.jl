@@ -114,10 +114,10 @@ end
 
 function object_to_moi(::Val{:ScalarQuadraticFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-   affine_terms = parse_vector_or_default(object["affine_terms"],
+    affine_terms = parse_vector_or_default(object["affine_terms"],
                        MOI.ScalarAffineTerm{Float64}, model, name_map)
-   quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
-                       MOI.ScalarQuadraticTerm{Float64}, model, name_map)
+    quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
+                          MOI.ScalarQuadraticTerm{Float64}, model, name_map)
     return MOI.ScalarQuadraticFunction(affine_terms, quadratic_terms,
                                        object["constant"])
 end
@@ -141,8 +141,8 @@ end
 
 function object_to_moi(::Val{:VectorAffineFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-   terms = parse_vector_or_default(object["terms"],
-               MOI.VectorAffineTerm{Float64}, model, name_map)
+    terms = parse_vector_or_default(object["terms"],
+                MOI.VectorAffineTerm{Float64}, model, name_map)
     return MOI.VectorAffineFunction(terms, Float64.(object["constants"]))
 end
 
@@ -155,10 +155,10 @@ end
 
 function object_to_moi(::Val{:VectorQuadraticFunction}, object::Object, model::Model,
                        name_map::Dict{String, MOI.VariableIndex})
-   affine_terms = parse_vector_or_default(object["affine_terms"],
+    affine_terms = parse_vector_or_default(object["affine_terms"],
                        MOI.VectorAffineTerm{Float64}, model, name_map)
-   quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
-                         MOI.VectorQuadraticTerm{Float64}, model, name_map)
+    quadratic_terms = parse_vector_or_default(object["quadratic_terms"],
+                          MOI.VectorQuadraticTerm{Float64}, model, name_map)
     return MOI.VectorQuadraticFunction(affine_terms, quadratic_terms,
                                        Float64.(object["constants"]))
 end
