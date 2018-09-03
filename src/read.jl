@@ -15,7 +15,14 @@ function read_variables(model::Model, object::Object)
     indices = MOI.add_variables(model, length(object["variables"]))
     name_map = Dict{String, MOI.VariableIndex}()
     for (index, variable) in zip(indices, object["variables"])
+        if !haskey(variable, "name")
+            error("Variable is missing a `name` field.")
+        end
         name = variable["name"]
+        if name == ""
+            error("Variable name is `\"\"`. MathOptFormat variable names must" *
+                  " be unique and non-empty.")
+        end
         MOI.set(model, MOI.VariableName(), index, name)
         name_map[name] = index
     end
@@ -25,7 +32,7 @@ end
 function read_objectives(model::Model, object::Object,
                          name_map::Dict{String, MOI.VariableIndex})
     if length(object["objectives"]) > 1
-        error("Multi-objective models not supported.")
+        error("Multi-objective models not supported by MathOptFormat.jl.")
     end
     objective = first(object["objectives"])
     MOI.set(model, MOI.ObjectiveSense(),

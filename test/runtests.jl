@@ -16,6 +16,12 @@ function test_model_equality(model_string, variables, constraints)
 end
 
 @testset "Error handling: read_from_file" begin
+    @testset "non-empty_model" begin
+        model = MathOptFormat.Model()
+        MOI.add_variable(model)
+        @test_throws Exception MOI.read_from_file(model,
+            "models/empty_model.mof.json")
+    end
     @testset "unsupported_constraint_set" begin
         @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
             "models/unsupported_constraint_set.mof.json")
@@ -31,6 +37,18 @@ end
     @testset "unsupported_objective_sense" begin
         @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
             "models/unsupported_objective_sense.mof.json")
+    end
+    @testset "multiple_objectives" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/multiple_objectives.mof.json")
+    end
+    @testset "blank_variable_name" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/blank_variable_name.mof.json")
+    end
+    @testset "missing_variable_name" begin
+        @test_throws Exception MOI.read_from_file(MathOptFormat.Model(),
+            "models/missing_variable_name.mof.json")
     end
 end
 
@@ -232,6 +250,48 @@ end
             minobjective: x
             c1: [x, y, z] in RotatedSecondOrderCone(3)
         """, ["x", "y", "z"], ["c1"])
+    end
+    @testset "PositiveSemidefiniteConeTriangle" begin
+        test_model_equality("""
+            variables: x1, x2, x3
+            minobjective: x
+            c1: [x1, x2, x3] in PositiveSemidefiniteConeTriangle(2)
+        """, ["x1", "x2", "x3"], ["c1"])
+    end
+    @testset "PositiveSemidefiniteConeSquare" begin
+        test_model_equality("""
+            variables: x1, x2, x3, x4
+            minobjective: x1
+            c1: [x1, x2, x3, x4] in PositiveSemidefiniteConeSquare(2)
+        """, ["x1", "x2", "x3", "x4"], ["c1"])
+    end
+    @testset "LogDetConeTriangle" begin
+        test_model_equality("""
+            variables: t, x1, x2, x3
+            minobjective: x
+            c1: [t, x1, x2, x3] in LogDetConeTriangle(2)
+        """, ["t", "x1", "x2", "x3", "z"], ["c1"])
+    end
+    @testset "LogDetConeSquare" begin
+        test_model_equality("""
+            variables: t, x1, x2, x3, x4
+            minobjective: x1
+            c1: [t, x1, x2, x3, x4] in LogDetConeSquare(2)
+        """, ["t", "x1", "x2", "x3", "x4"], ["c1"])
+    end
+    @testset "RootDetConeTriangle" begin
+        test_model_equality("""
+            variables: t, x1, x2, x3
+            minobjective: x
+            c1: [t, x1, x2, x3] in RootDetConeTriangle(2)
+        """, ["t", "x1", "x2", "x3", "z"], ["c1"])
+    end
+    @testset "RootDetConeSquare" begin
+        test_model_equality("""
+            variables: t, x1, x2, x3, x4
+            minobjective: x1
+            c1: [t, x1, x2, x3, x4] in RootDetConeSquare(2)
+        """, ["t", "x1", "x2", "x3", "x4"], ["c1"])
     end
 
     # Clean up
