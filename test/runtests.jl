@@ -1,4 +1,4 @@
-using MathOptFormat, Test
+using MathOptFormat, Compat.Test
 
 const MOI = MathOptFormat.MOI
 const MOIU = MathOptFormat.MOIU

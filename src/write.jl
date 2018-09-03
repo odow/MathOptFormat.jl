@@ -33,6 +33,7 @@ function write_objectives(object::Object, model::Model,
         "sense"    => moi_to_object(sense),
         "function" => moi_to_object(objective_function, model, name_map)
     ))
+    return
 end
 
 function write_constraints(object::Object, model::Model,

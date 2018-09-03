@@ -1,5 +1,5 @@
 function MOI.read_from_file(model::Model, filename::String)
-    if !MOI.isempty(model)
+    if !MOI.is_empty(model)
         error("Cannot read model from file as destination model is not empty.")
     end
     object = open(filename, "r") do io
@@ -8,7 +8,7 @@ function MOI.read_from_file(model::Model, filename::String)
     name_map = read_variables(model, object)
     read_objectives(model, object, name_map)
     read_constraints(model, object, name_map)
-    return nothing
+    return
 end
 
 function read_variables(model::Model, object::Object)
