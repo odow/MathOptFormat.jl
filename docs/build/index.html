@@ -146,17 +146,14 @@ const MOI = MathOptFormat.MOI
 
 model = MathOptFormat.Model{Float64}()
 
-# MOI.set(model, MathOptFormat.Author(), &quot;Oscar Dowson&quot;)
-# MOI.set(model, MathOptFormat.Description(), &quot;A simple example for the MathOptFormat documentation&quot;)
-
 # Create variables
-(x, y) = MOI.addvariables!(model, 2)
-MOI.set!(model, MOI.VariableName(), x, &quot;x&quot;)
-MOI.set!(model, MOI.VariableName(), y, &quot;y&quot;)
+(x, y) = MOI.add_variables(model, 2)
+MOI.set(model, MOI.VariableName(), x, &quot;x&quot;)
+MOI.set(model, MOI.VariableName(), y, &quot;y&quot;)
 
 # Set objective
-MOI.set!(model, MOI.ObjectiveSense(), MOI.MinSense)
-MOI.set!(model,
+MOI.set(model, MOI.ObjectiveSense(), MOI.MinSense)
+MOI.set(model,
     MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),
     MOI.ScalarAffineFunction(
         MOI.ScalarAffineTerm.([2.0, 1.0], [x, y]),
@@ -164,20 +161,20 @@ MOI.set!(model,
 )
 
 # The constraint: x+y≥1 becomes x+y ∈ [1, ∞)
-c1 = MOI.addconstraint!(model,
+c1 = MOI.add_constraint(model,
     MOI.ScalarAffineFunction(
         MOI.ScalarAffineTerm.([1.0, 1.0], [x, y]),
         0.0),
     MOI.GreaterThan(1.0)
 )
-MOI.set!(model, MOI.ConstraintName(), c1, &quot;x+y≥1&quot;)
+MOI.set(model, MOI.ConstraintName(), c1, &quot;x+y≥1&quot;)
 
 # The constraint: x, Binary becomes x ∈ {0, 1}
-c2 = MOI.addconstraint!(model,
+c2 = MOI.add_constraint(model,
     MOI.SingleVariable(x),
     MOI.ZeroOne()
 )
-MOI.set!(model, MOI.ConstraintName(), c2, &quot;x ∈ {0,1}&quot;)
+MOI.set(model, MOI.ConstraintName(), c2, &quot;x ∈ {0,1}&quot;)
 
 # Write the model to file
-MOI.write(model, &quot;example.mof.json&quot;)</code></pre><h2><a class="nav-anchor" id="References-1" href="#References-1">References</a></h2><div class="footnote" id="footnote-1"><a href="#footnote-1"><strong>[1]</strong></a><p>Gassmann, H., Ma, J., Martin, K. (2010). <a href="https://www.coin-or.org/OS/publications/instanceformats_encyclopedia2009.pdf">Instance Formats for Mathematical Optimization Models</a>. In <em>Wiley Encyclopedia of Operations Research and Management Science</em>.</p></div><div class="footnote" id="footnote-2"><a href="#footnote-2"><strong>[2]</strong></a><p>Orchard-Hays, W. (1984). <a href="http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4640725">History of Mathematical Programming Systems</a>. <em>Annals of the History of Computing, 6</em>(3).</p></div><div class="footnote" id="footnote-3"><a href="#footnote-3"><strong>[3]</strong></a><p>Friberg, H. (2014). <em><a href="http://orbit.dtu.dk/files/88492586/Conic_Benchmark_Format.pdf">The conic benchmark format: version 1 - technical reference manual</a></em> (Technical Report E-0047). Department of Wind Energy, Technical University of Denmark.</p></div><div class="footnote" id="footnote-4"><a href="#footnote-4"><strong>[4]</strong></a><p>Fourer, R., Jun M., Kipp M. (2010). <a href="https://www.coin-or.org/OS/publications/OSiL%201_0%20FINAL.pdf">OSiL: An Instance Language for Optimization</a>. <em>Computational Optimization and Applications 45</em>(1): 181–203.</p></div><div class="footnote" id="footnote-5"><a href="#footnote-5"><strong>[5]</strong></a><p>Gay, D. (1995). <a href="https://cfwebprod.sandia.gov/cfdocs/CompResearch/docs/nlwrite20051130.pdf"><em>Writing .nl Files</em></a> (SAND2005-7907P). Sandia National Laboratories, Albuquerque, NM.</p></div><div class="footnote" id="footnote-6"><a href="#footnote-6"><strong>[6]</strong></a><p>Lubin, M. et al. (2017). <a href="http://www.juliaopt.org/MathOptInterface.jl/latest/">MathOptInterface.jl</a>. URL:<a href="http://www.juliaopt.org/MathOptInterface.jl/latest/">MathOptInterface.jl</a></p></div><footer><hr/></footer></article></body></html>
+MOI.write_to_file(model, &quot;example.mof.json&quot;)</code></pre><h2><a class="nav-anchor" id="References-1" href="#References-1">References</a></h2><div class="footnote" id="footnote-1"><a href="#footnote-1"><strong>[1]</strong></a><p>Gassmann, H., Ma, J., Martin, K. (2010). <a href="https://www.coin-or.org/OS/publications/instanceformats_encyclopedia2009.pdf">Instance Formats for Mathematical Optimization Models</a>. In <em>Wiley Encyclopedia of Operations Research and Management Science</em>.</p></div><div class="footnote" id="footnote-2"><a href="#footnote-2"><strong>[2]</strong></a><p>Orchard-Hays, W. (1984). <a href="http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=4640725">History of Mathematical Programming Systems</a>. <em>Annals of the History of Computing, 6</em>(3).</p></div><div class="footnote" id="footnote-3"><a href="#footnote-3"><strong>[3]</strong></a><p>Friberg, H. (2014). <em><a href="http://orbit.dtu.dk/files/88492586/Conic_Benchmark_Format.pdf">The conic benchmark format: version 1 - technical reference manual</a></em> (Technical Report E-0047). Department of Wind Energy, Technical University of Denmark.</p></div><div class="footnote" id="footnote-4"><a href="#footnote-4"><strong>[4]</strong></a><p>Fourer, R., Jun M., Kipp M. (2010). <a href="https://www.coin-or.org/OS/publications/OSiL%201_0%20FINAL.pdf">OSiL: An Instance Language for Optimization</a>. <em>Computational Optimization and Applications 45</em>(1): 181–203.</p></div><div class="footnote" id="footnote-5"><a href="#footnote-5"><strong>[5]</strong></a><p>Gay, D. (1995). <a href="https://cfwebprod.sandia.gov/cfdocs/CompResearch/docs/nlwrite20051130.pdf"><em>Writing .nl Files</em></a> (SAND2005-7907P). Sandia National Laboratories, Albuquerque, NM.</p></div><div class="footnote" id="footnote-6"><a href="#footnote-6"><strong>[6]</strong></a><p>Lubin, M. et al. (2017). <a href="http://www.juliaopt.org/MathOptInterface.jl/latest/">MathOptInterface.jl</a>. URL:<a href="http://www.juliaopt.org/MathOptInterface.jl/latest/">MathOptInterface.jl</a></p></div><footer><hr/></footer></article></body></html>
