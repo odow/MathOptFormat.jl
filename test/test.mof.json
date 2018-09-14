@@ -1,0 +1,34 @@
+{
+  "name": "MathOptFormat Model",
+  "version": 0,
+  "variables": [
+    {
+      "name": "x"
+    }
+  ],
+  "objectives": [
+    {
+      "sense": "min",
+      "function": {
+        "head": "ScalarQuadraticFunction",
+        "affine_terms": [
+          {
+            "head": "ScalarAffineTerm",
+            "coefficient": -2.0,
+            "variable_index": "x"
+          }
+        ],
+        "quadratic_terms": [
+          {
+            "head": "ScalarQuadraticTerm",
+            "coefficient": 2.0,
+            "variable_index_1": "x",
+            "variable_index_2": "x"
+          }
+        ],
+        "constant": 1.0
+      }
+    }
+  ],
+  "constraints": []
+}
