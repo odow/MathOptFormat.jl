@@ -15,6 +15,21 @@ function test_model_equality(model_string, variables, constraints)
     MOIU.test_models_equal(model, model_2, variables, constraints)
 end
 
+function roundtrip_nonlinear_expression(expr)
+    node_list = MathOptFormat.Object[]
+    object = MathOptFormat.convert_expr_to_mof(expr, node_list)
+    @test MathOptFormat.convert_mof_to_expr(object, node_list) == expr
+end
+
+@testset "Roundtrip nonlinear expressions" begin
+    for expression in [2, 2.34, :x, :(1 + x), :(x - 1), :(x + y), :(x + y - z),
+                       :(2x), :(x * y), :(x / 2), :(2 / x), :(x / y),
+                       :(x / y / z), :(2^x), :(x^2), :(x^y), :(x^(2 * y + 1)),
+                       :(sin(x)), :(sin(x + y)), :(2x + sin(x)^2 + y)]
+        roundtrip_nonlinear_expression(expression)
+    end
+end
+
 @testset "Error handling: read_from_file" begin
     @testset "non-empty_model" begin
         model = MathOptFormat.Model()

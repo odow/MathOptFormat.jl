@@ -40,4 +40,6 @@ end
 include("read.jl")
 include("write.jl")
 
+include("nonlinear.jl")
+
 end
