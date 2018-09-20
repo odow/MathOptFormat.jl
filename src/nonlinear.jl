@@ -74,11 +74,7 @@ The arity of a nonlinear function. One of:
  - `Unary` if the function accepts exactly one argument
  - `Binary` if the function accepts exactly two arguments.
 """
-@enum ARITY begin
-    Nary
-    Unary
-    Binary
-end
+@enum ARITY Nary Unary Binary
 
 # A nice error message telling the user they supplied the wrong number of
 # arguments to a nonlinear function.

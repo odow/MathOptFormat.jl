@@ -23,6 +23,9 @@ end
         # Test binary function with one arguments.
         @test_throws Exception MathOptFormat.convert_expr_to_mof(
             :(^(x)), node_list)
+        # An expression with something other than :call as the head.
+        @test_throws Exception MathOptFormat.convert_expr_to_mof(
+            :(a <= b <= c), node_list)
     end
     @testset "Roundtrip nonlinear expressions" begin
         for expression in [2, 2.34, 2 + 3im, :x, :(1 + x), :(x - 1), :(x + y),
