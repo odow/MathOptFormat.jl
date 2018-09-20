@@ -10,6 +10,10 @@ const Object = OrderedDict{String, Any}
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 
+struct Nonlinear <: MOI.AbstractScalarFunction
+    expr::Expr
+end
+
 MOIU.@model(Model,
     (MOI.ZeroOne, MOI.Integer),
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval,
@@ -22,7 +26,7 @@ MOIU.@model(Model,
         MOI.PositiveSemidefiniteConeTriangle, MOI.PositiveSemidefiniteConeSquare,
         MOI.ExponentialCone, MOI.DualExponentialCone),
     (MOI.PowerCone, MOI.DualPowerCone, MOI.SOS1, MOI.SOS2),
-    (MOI.SingleVariable,),
+    (MOI.SingleVariable, Nonlinear),
     (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
     (MOI.VectorOfVariables,),
     (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)

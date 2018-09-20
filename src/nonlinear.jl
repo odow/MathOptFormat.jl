@@ -1,55 +1,69 @@
-#=
-    Expr:
-        2 * x + sin(x)^2 + y
+# Overload for writing.
+function moi_to_object(foo::Nonlinear, model::Model,
+                       name_map::Dict{MOI.VariableIndex, String})
+    node_list = Object[]
+    foo_object = convert_expr_to_mof(foo.expr, node_list)
+    return Object("head" => "Nonlinear", "root" => foo_object,
+                  "node_list" => node_list)
+end
 
-    Tree form:
+# Overload for reading.
+function function_to_moi(::Val{:Nonlinear}, object::Object, model::Model,
+                       name_map::Dict{String, MOI.VariableIndex})
+    node_list = Object.(object["node_list"])
+    expr = convert_mof_to_expr(object["root"], node_list)
+    return Nonlinear(expr)
+end
+
+#=
+Expr:
+    2 * x + sin(x)^2 + y
+
+Tree form:
                     +-- (2)
           +-- (*) --+
           |         +-- (x)
     (+) --+
-          |         +-- (sin) -+- (x)
+          |         +-- (sin) --+-- (x)
           +-- (^) --+
           |         +-- (2)
-          |
           +-- (y)
 
-    MOF format:
+MOF format:
 
-        {
-            "objectives": [
-                {"sense": "max", "function": {"head": "node", "index": 4}}
-            ]
-            "node_list": [
-                {
-                    "head": "*", "args": [
-                        {"head": "real", "value": 2},
-                        {"head": "variable", "name": "x"}
-                    ]
-                },
-                {
-                    "head": "sin",
-                    "args": [
-                        {"head": "variable", "name", "x"}
-                    ]
-                }
-                {
-                    "head": "^",
-                    "args": [
-                        {"head": "node", "index": 2},
-                        {"head": "real", "value": 2}
-                    ]
-                },
-                {
-                    "head": "+",
-                    "args": [
-                        {"head": "node", "index": 1},
-                        {"head": "node", "index": 3},
-                        {"head": "variable", "name": "y"}
-                    ]
-                }
-            ]
-        }
-
+    {
+        "head": "nonlinear",
+        "root": {"head": "node", "index": 4},
+        "node_list": [
+            {
+                "head": "*", "args": [
+                    {"head": "real", "value": 2},
+                    {"head": "variable", "name": "x"}
+                ]
+            },
+            {
+                "head": "sin",
+                "args": [
+                    {"head": "variable", "name", "x"}
+                ]
+            }
+            {
+                "head": "^",
+                "args": [
+                    {"head": "node", "index": 2},
+                    {"head": "real", "value": 2}
+                ]
+            },
+            {
+                "head": "+",
+                "args": [
+                    {"head": "node", "index": 1},
+                    {"head": "node", "index": 3},
+                    {"head": "variable", "name": "y"}
+                ]
+            }
+        ]
+    }
 =#
 
 """
@@ -93,48 +107,51 @@ Symbol form).
 const SUPPORTED_FUNCTIONS = Pair{String, Tuple{Symbol, ARITY}}[
     # ==========================================================================
     # The standard arithmetic functions.
-    # An n-ary function for addition: +(a, b, c) = a + b + c
-    "+" => (:+, Nary),
-    # An n-ary function for subtraction: -(a, b, c) = a - b - c
-    "-" => (:-, Nary),
-    # An n-ary function for multiplication: *(a, b, c) = a * b * c
-    "*" => (:*, Nary),
-    # A binary function for division. It must have exactly two arguments. The
-    # first argument is the numerator, the second argument is the denominator:
+    # The addition operator: +(a, b, c, ...) = a + b + c + ...
+    # In the unary case, +(a) = a.
+    "+"     => (:+, Nary),
+    # The subtraction operator: -(a, b, c, ...) = a - b - c - ...
+    # In the unary case, -(a) = -a.
+    "-"     => (:-, Nary),
+    # The multiplication operator: *(a, b, c, ...) = a * b * c * ...
+    # In the unary case, *(a) = a.
+    "*"     => (:*, Nary),
+    # The division operator. This must have exactly two arguments. The first
+    # argument is the numerator, the second argument is the denominator:
     # /(a, b) = a / b.
-    "/" => (:/, Binary),
+    "/"     => (:/, Binary),
     # ==========================================================================
     # N-ary minimum and maximum functions.
-    "min" => (:min, Nary),
-    "max" => (:max, Nary),
+    "min"   => (:min, Nary),
+    "max"   => (:max, Nary),
     # ==========================================================================
     # The absolute value function: abs(x) = (x >= 0 ? x : -x).
-    "abs" => (:abs, Unary),
+    "abs"   => (:abs, Unary),
     # ==========================================================================
     # Log- and power-related functions.
-    # A binary function for exponentiation ^(a, b) = a ^ b.
-    "^" => (:^, Binary),
+    # A binary function for exponentiation: ^(a, b) = a ^ b.
+    "^"     => (:^, Binary),
     # The natural exponential function: exp(x) = e^x.
-    "exp" => (:exp, Unary),
+    "exp"   => (:exp, Unary),
     # The base-e log function: y = log(x) => e^y = x.
-    "log" => (:log, Unary),
+    "log"   => (:log, Unary),
     # The base-10 log function: y = log10(x) => 10^y = x.
     "log10" => (:log10, Unary),
     # The square root function: sqrt(x) = √x = x^(0.5).
-    "sqrt" => (:sqrt, Unary),
+    "sqrt"  => (:sqrt, Unary),
     # ==========================================================================
     # The unary trigonometric functions. These must have exactly one argument.
-    "cos" => (:cos, Unary),
-    "cosh" => (:cosh, Unary),
-    "acos" => (:acos, Unary),
+    "cos"   => (:cos, Unary),
+    "cosh"  => (:cosh, Unary),
+    "acos"  => (:acos, Unary),
     "acosh" => (:acosh, Unary),
-    "sin" => (:sin, Unary),
-    "sinh" => (:sinh, Unary),
-    "asin" => (:asin, Unary),
+    "sin"   => (:sin, Unary),
+    "sinh"  => (:sinh, Unary),
+    "asin"  => (:asin, Unary),
     "asinh" => (:asinh, Unary),
-    "tan" => (:tan, Unary),
-    "tanh" => (:tanh, Unary),
-    "atan" => (:atan, Unary),
+    "tan"   => (:tan, Unary),
+    "tanh"  => (:tanh, Unary),
+    "atan"  => (:atan, Unary),
     "atanh" => (:atanh, Unary)
 ]
 
@@ -191,7 +208,7 @@ nodes that are required are appended to `node_list`.
 """
 function convert_expr_to_mof(expr::Expr, node_list::Vector{Object})
     if expr.head != :call
-        error("Expected an expression that was a function.")
+        error("Expected an expression that was a function. Got $(expr).")
     end
     function_name = expr.args[1]
     if !haskey(FUNCTION_TO_STRING, function_name)
