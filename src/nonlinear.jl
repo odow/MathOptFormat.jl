@@ -78,18 +78,12 @@ The arity of a nonlinear function. One of:
 
 # A nice error message telling the user they supplied the wrong number of
 # arguments to a nonlinear function.
-function throw_invalid_arguments(function_name, function_type, num_arguments)
-    error("The function $(function_name) is an ($function_type) function, but" *
-          " you have passed $(num_arguments) arguments.")
-end
-
-function validate_arguments(function_name, actual::Int, required::ARITY)
-    if required == Nary && actual < 1
-        throw_invalid_arguments(function_name, "n-ary", actual)
-    elseif required == Unary && actual != 1
-        throw_invalid_arguments(function_name, "unary", actual)
-    elseif required == Binary && actual != 2
-        throw_invalid_arguments(function_name, "biary", actual)
+function validate_arguments(function_name, arity::ARITY, num_arguments::Int)
+    if ((arity == Nary && num_arguments < 1) ||
+        (arity == Unary && num_arguments != 1) ||
+        (arity == Binary && num_arguments != 2))
+        error("The function $(function_name) is a $(arity) function, but you " *
+              "have passed $(num_arguments) arguments.")
     end
 end
 
@@ -167,10 +161,12 @@ for (mathoptformat_string, (julia_symbol, num_arguments)) in SUPPORTED_FUNCTIONS
 end
 
 """
-    convert_mof_to_expr(node::Object, node_list::Vector{Object})
+    convert_mof_to_expr(node::Object, node_list::Vector{Object},
+                        name_map::Dict{String, MOI.VariableIndex})
 
 Convert a MathOptFormat node `node` into a Julia expression given a list of
-MathOptFormat nodes in `node_list`.
+MathOptFormat nodes in `node_list`. Variable names are mapped through `name_map`
+to their variable index.
 """
 function convert_mof_to_expr(node::Object, node_list::Vector{Object},
                              name_map::Dict{String, MOI.VariableIndex})
@@ -187,8 +183,8 @@ function convert_mof_to_expr(node::Object, node_list::Vector{Object},
         if !haskey(STRING_TO_FUNCTION, head)
             error("Cannot convert MOF to Expr. Unknown function: $(head).")
         end
-        (julia_symbol, num_arguments) = STRING_TO_FUNCTION[head]
-        validate_arguments(head, length(node["args"]), num_arguments)
+        (julia_symbol, arity) = STRING_TO_FUNCTION[head]
+        validate_arguments(head, arity, length(node["args"]))
         expr = Expr(:call, julia_symbol)
         for arg in node["args"]
             push!(expr.args, convert_mof_to_expr(arg, node_list, name_map))
@@ -198,10 +194,12 @@ function convert_mof_to_expr(node::Object, node_list::Vector{Object},
 end
 
 """
-    convert_mof_to_expr(node::Object, node_list::Vector{Object})
+    convert_mof_to_expr(node::Object, node_list::Vector{Object},
+                        name_map::Dict{MOI.VariableIndex, String})
 
 Convert a Julia expression into a MathOptFormat representation. Any intermediate
-nodes that are required are appended to `node_list`.
+nodes that are required are appended to `node_list`. Variable indices are mapped
+through `name_map` to their string name.
 """
 function convert_expr_to_mof(expr::Expr, node_list::Vector{Object},
                              name_map::Dict{MOI.VariableIndex, String})
@@ -212,12 +210,9 @@ function convert_expr_to_mof(expr::Expr, node_list::Vector{Object},
     if !haskey(FUNCTION_TO_STRING, function_name)
         error("Cannot convert Expr to MOF. Unknown function: $(function_name).")
     end
-    (mathoptformat_string, num_arguments) = FUNCTION_TO_STRING[function_name]
-    validate_arguments(function_name, length(expr.args) - 1, num_arguments)
-    node = Object(
-        "head" => mathoptformat_string,
-        "args" => Object[]
-    )
+    (mathoptformat_string, arity) = FUNCTION_TO_STRING[function_name]
+    validate_arguments(function_name, arity, length(expr.args) - 1)
+    node = Object("head" => mathoptformat_string, "args" => Object[])
     for arg in @view(expr.args[2:end])
         push!(node["args"], convert_expr_to_mof(arg, node_list, name_map))
     end
