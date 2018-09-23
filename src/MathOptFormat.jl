@@ -14,7 +14,7 @@ struct Nonlinear <: MOI.AbstractScalarFunction
     expr::Expr
 end
 
-MOIU.@model(Model,
+MOIU.@model(InnerModel,
     (MOI.ZeroOne, MOI.Integer),
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval,
         MOI.Semicontinuous, MOI.Semiinteger),
@@ -32,18 +32,24 @@ MOIU.@model(Model,
     (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)
 )
 
+# TODO(odow): missing method in MOI/src/utilities/model.jl.
+MOI.supports(::InnerModel, ::MOI.ObjectiveFunctionType) = true
+
+const Model = MOIU.UniversalFallback{InnerModel{Float64}}
+
 """
     Model()
 
 Create an empty instance of MathOptFormat.Model.
 """
 function Model()
-    return Model{Float64}()
+    return MOIU.UniversalFallback(InnerModel{Float64}())
 end
+
+include("nonlinear.jl")
 
 include("read.jl")
 include("write.jl")
 
-include("nonlinear.jl")
 
 end

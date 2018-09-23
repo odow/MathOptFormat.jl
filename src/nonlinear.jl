@@ -15,6 +15,82 @@ function function_to_moi(::Val{:Nonlinear}, object::Object, model::Model,
     return Nonlinear(expr)
 end
 
+function substitute_variables(expr::Expr, variables::Vector{MOI.VariableIndex})
+    if expr.head == :ref && length(expr.args) == 2 && expr.args[1] == :x
+        index = expr.args[2]
+        if !(1 <= index <= length(variables))
+            error("Oops! Your expression refers to x[$(index)] but there are " *
+                  "only $(length(variables)) variables.")
+        end
+        return variables[index]
+    else
+        for (index, arg) in enumerate(expr.args)
+            expr.args[index] = substitute_variables(arg, variables)
+        end
+    end
+    return expr
+end
+# Recursion fallback.
+substitute_variables(arg, variables::Vector{MOI.VariableIndex}) = arg
+
+function extract_function_and_set(expr::Expr)
+    if expr.head == :call  # One-sided constraint or foo-in-set.
+        @assert length(expr.args) == 3
+        if expr.args[1] == :in
+            # return expr.args[2], expr.args[3]
+            error("Constraints of the form foo-in-set aren't supported yet.")
+        elseif expr.args[1] == :(<=)
+            return expr.args[2], MOI.LessThan(expr.args[3])
+        elseif expr.args[1] == :(>=)
+            return expr.args[2], MOI.GreaterThan(expr.args[3])
+        elseif expr.args[1] == :(==)
+            return expr.args[2], MOI.EqualTo(expr.args[3])
+        end
+    elseif expr.head == :comparison  # Two-sided constraint.
+        @assert length(expr.args) == 5
+        if expr.args[2] == expr.args[4] == :(<=)
+            return expr.args[3], MOI.Interval(expr.args[1], expr.args[5])
+        elseif expr.args[2] == expr.args[4] == :(>=)
+            return expr.args[3], MOI.Interval(expr.args[5], expr.args[1])
+        end
+    end
+    error("Oops. The constraint $(expr) wasn't recognised.")
+end
+
+function write_nlpblock(object::Object, model::Model,
+                        name_map::Dict{MOI.VariableIndex, String})
+    # TODO(odow): is there a better way of checking if the NLPBlock is set?
+    nlp_block = try
+        MOI.get(model, MOI.NLPBlock())
+    catch ex
+        if isa(ex, KeyError)
+            return  # No NLPBlock set.
+        else
+            rethrow(ex)
+        end
+    end
+    MOI.initialize(nlp_block.evaluator, [:ExprGraph])
+    variables = MOI.get(model, MOI.ListOfVariableIndices())
+    if nlp_block.has_objective
+        objective = MOI.objective_expr(nlp_block.evaluator)
+        objective = substitute_variables(objective, variables)
+        sense = MOI.get(model, MOI.ObjectiveSense())
+        push!(object["objectives"], Object(
+            "sense"    => moi_to_object(sense),
+            "function" => moi_to_object(Nonlinear(objective), model, name_map)
+        ))
+    end
+    for (row, bounds) in enumerate(nlp_block.constraint_bounds)
+        constraint = MOI.constraint_expr(nlp_block.evaluator, row)
+        (func, set) = extract_function_and_set(constraint)
+        func = substitute_variables(func, variables)
+        push!(object["constraints"],
+            Object("function" => moi_to_object(Nonlinear(func), model, name_map),
+                   "set"      => moi_to_object(set, model, name_map))
+        )
+    end
+end
+
 #=
 Expr:
     2 * x + sin(x)^2 + y
