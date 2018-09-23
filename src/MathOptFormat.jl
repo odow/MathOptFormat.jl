@@ -32,9 +32,6 @@ MOIU.@model(InnerModel,
     (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)
 )
 
-# TODO(odow): missing method in MOI/src/utilities/model.jl.
-MOI.supports(::InnerModel, ::MOI.ObjectiveFunctionType) = true
-
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 
 """
