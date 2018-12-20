@@ -3,6 +3,8 @@ using MathOptFormat, Compat.Test
 const MOI = MathOptFormat.MOI
 const MOIU = MathOptFormat.MOIU
 
+@test sprint(show, MathOptFormat.Model()) == "A MathOptFormat Model"
+
 include("nonlinear.jl")
 
 struct UnsupportedSet <: MOI.AbstractSet end

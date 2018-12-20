@@ -76,7 +76,18 @@ end
         # Hit the default fallback with an un-interpolated complex number.
         @test_throws Exception MathOptFormat.convert_expr_to_mof(
             :(1 + 2im), node_list, variable_to_string)
-
+        # Invalid number of variables.
+        @test_throws Exception MathOptFormat.substitute_variables(
+            :(x[1] * x[2]), [MOI.VariableIndex(1)])
+        # Function-in-Set
+        @test_throws Exception MathOptFormat.extract_function_and_set(
+            :(foo in set))
+        # Not a constraint.
+        @test_throws Exception MathOptFormat.extract_function_and_set(:(x^2))
+        # Function-in-Set
+        @test MathOptFormat.extract_function_and_set(:(1 <= x <= 2)) ==
+            MathOptFormat.extract_function_and_set(:(2 >= x >= 1)) ==
+            (:x, MOI.Interval(1, 2))
     end
     @testset "Roundtrip nonlinear expressions" begin
         x = MOI.VariableIndex(123)
