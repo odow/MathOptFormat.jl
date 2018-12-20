@@ -37,7 +37,7 @@ end
 function read_objectives(model::Model, object::Object,
                          name_map::Dict{String, MOI.VariableIndex})
     if length(object["objectives"]) == 0
-        MOI.set(model, MOI.ObjectiveSense(), MOI.FeasibilitySense)
+        MOI.set(model, MOI.ObjectiveSense(), MOI.FEASIBILITY_SENSE)
     elseif length(object["objectives"]) > 1
         error("Multi-objective models not supported by MathOptFormat.jl.")
     else

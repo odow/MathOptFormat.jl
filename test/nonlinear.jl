@@ -40,12 +40,14 @@ end
         MOI.add_constraints(model, MOI.SingleVariable.(x),
                             Ref(MOI.Interval(1.0, 5.0)))
         MOI.set(model, MOI.NLPBlock(), HS071())
-        MOI.set(model, MOI.ObjectiveSense(), MOI.MinSense)
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         MOI.write_to_file(model, "test.mof.json")
         if VERSION >= v"0.7"
-            @test read("test.mof.json", String) == read("models/nlp.mof.json", String)
+            @test read("test.mof.json", String) ==
+                read("models/nlp.mof.json", String)
         else
-            @test readstring("test.mof.json") == readstring("models/nlp.mof.json")
+            @test readstring("test.mof.json") ==
+                readstring("models/nlp.mof.json")
         end
     end
     @testset "Error handling" begin

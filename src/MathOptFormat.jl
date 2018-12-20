@@ -13,6 +13,7 @@ const MOIU = MOI.Utilities
 struct Nonlinear <: MOI.AbstractScalarFunction
     expr::Expr
 end
+Base.copy(nonlinear::Nonlinear) = Nonlinear(copy(nonlinear.expr))
 
 MOIU.@model(InnerModel,
     (MOI.ZeroOne, MOI.Integer),
@@ -41,6 +42,11 @@ Create an empty instance of MathOptFormat.Model.
 """
 function Model()
     return MOIU.UniversalFallback(InnerModel{Float64}())
+end
+
+function Base.show(io::IO, ::Model)
+    print(io, "A MathOptFormat Model")
+    return
 end
 
 include("nonlinear.jl")
