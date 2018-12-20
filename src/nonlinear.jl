@@ -63,11 +63,8 @@ function write_nlpblock(object::Object, model::Model,
     nlp_block = try
         MOI.get(model, MOI.NLPBlock())
     catch ex
-        if isa(ex, KeyError)
-            return  # No NLPBlock set.
-        else
-            rethrow(ex)
-        end
+        @assert isa(ex, KeyError)
+        return  # No NLPBlock set.
     end
     MOI.initialize(nlp_block.evaluator, [:ExprGraph])
     variables = MOI.get(model, MOI.ListOfVariableIndices())

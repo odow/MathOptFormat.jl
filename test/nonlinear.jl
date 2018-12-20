@@ -84,10 +84,13 @@ end
             :(foo in set))
         # Not a constraint.
         @test_throws Exception MathOptFormat.extract_function_and_set(:(x^2))
-        # Function-in-Set
+        # Two-sided constraints
         @test MathOptFormat.extract_function_and_set(:(1 <= x <= 2)) ==
             MathOptFormat.extract_function_and_set(:(2 >= x >= 1)) ==
             (:x, MOI.Interval(1, 2))
+        # Less-than constraint.
+        @test MathOptFormat.extract_function_and_set(:(x <= 2)) ==
+            (:x, MOI.LessThan(2))
     end
     @testset "Roundtrip nonlinear expressions" begin
         x = MOI.VariableIndex(123)
