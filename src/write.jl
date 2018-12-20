@@ -86,7 +86,8 @@ function moi_to_object(sense::MOI.OptimizationSense)
         return "min"
     elseif sense == MOI.MAX_SENSE
         return "max"
-    elseif sense == MOI.FEASIBILITY_SENSE
+    else
+        @assert sense == MOI.FEASIBILITY_SENSE
         return "feasibility"
     end
 end
