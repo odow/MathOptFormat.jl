@@ -10,3 +10,7 @@ end
 @testset "MPS" begin
     include("MPS/MPS.jl")
 end
+
+@testset "CBF" begin
+    include("CBF/CBF.jl")
+end
