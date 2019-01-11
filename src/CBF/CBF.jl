@@ -273,8 +273,13 @@ end
 # ==============================================================================
 
 # Convert a pair of row and column indices of a symmetric matrix into a vector index for the row-wise lower triangle
-matrix_to_vector_idx(i::Int, j::Int) = (i < j) ?
-    div((j - 1) * j, 2) + i : div((i - 1) * i, 2) + j
+function matrix_to_vector_idx(i::Int, j::Int)
+    if i < j
+        return div((j - 1) * j, 2) + i
+    else
+        return div((i - 1) * i, 2) + j
+    end
+end
 
 function MOI.read_from_file(model::Model, filename::String)
     if !MOI.is_empty(model)
