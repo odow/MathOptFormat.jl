@@ -43,8 +43,8 @@ function MOI.write_to_file(model::Model, filename::String)
 
         # Objective sense.
         println(io, "OBJSENSE")
-        objsense = MOI.get(model, MOI.ObjectiveSense())
-        if objsense == MOI.MaxSense
+        obj_sense = MOI.get(model, MOI.ObjectiveSense())
+        if obj_sense == MOI.MAX_SENSE
             println(io, "MAX")
         else
             println(io, "MIN") # Includes the case of MOI.FeasibilitySense.
@@ -52,63 +52,63 @@ function MOI.write_to_file(model::Model, filename::String)
         println(io)
 
         # Variables.
-        nvar = MOI.get(model, MOI.NumberOfVariables())
+        num_var = MOI.get(model, MOI.NumberOfVariables())
         println(io, "VAR")
-        println(io, nvar, " 1")
-        println(io, "F ", nvar)
+        println(io, num_var, " 1")
+        println(io, "F ", num_var)
         println(io)
 
         # Helper functions for MOI.
-        getmodelcons(F, S) = MOI.get(model, MOI.ListOfConstraintIndices{F, S}())
-        getconfun(conidx) = MOI.get(model, MOI.ConstraintFunction(), conidx)
-        getconset(conidx) = MOI.get(model, MOI.ConstraintSet(), conidx)
+        model_constraints(F, S) = MOI.get(model, MOI.ListOfConstraintIndices{F, S}())
+        con_function(conidx) = MOI.get(model, MOI.ConstraintFunction(), conidx)
+        con_set(conidx) = MOI.get(model, MOI.ConstraintSet(), conidx)
 
         # Integrality constraints.
-        intlist = getmodelcons(MOI.SingleVariable, MOI.Integer)
-        if length(intlist) > 0
+        integer_cons = model_constraints(MOI.SingleVariable, MOI.Integer)
+        if length(integer_cons) > 0
             println(io, "INT")
-            println(io, length(intlist))
-            for k in intlist
-                println(io, getconfun(ci).variable.value - 1)
+            println(io, length(integer_cons))
+            for con_idx in integer_cons
+                println(io, con_function(con_idx).variable.value - 1) # CBF indices start at 0.
             end
             println(io)
         end
 
         # Objective function terms.
-        F = MOI.get(model, MOI.ObjectiveFunctionType())
-        obj = MOI.get(model, MOI.ObjectiveFunction{F}())
-        if F == MOI.SingleVariable # Objective is a single variable.
+        obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
+        obj_function = MOI.get(model, MOI.ObjectiveFunction{obj_type}())
+        if obj_type == MOI.SingleVariable # Objective is a single variable.
             println(io, "OBJACOORD")
             println(io, 1)
-            println(io, F.variable.value - 1, " ", 1.0)
+            println(io, obj_function.variable.value - 1, " ", 1.0) # CBF indices start at 0.
             println(io)
-        elseif F == MOI.ScalarAffineFunction{Float64} # Objective is affine.
-            if !isempty(obj.terms)
+        elseif obj_type == MOI.ScalarAffineFunction{Float64} # Objective is affine.
+            if !isempty(obj_function.terms)
                 println(io, "OBJACOORD")
-                println(io, length(obj.terms))
-                for t in obj.terms
-                    println(io, t.variable_index.value - 1, " ", t.coefficient)
+                println(io, length(obj_function.terms))
+                for t in obj_function.terms
+                    println(io, t.variable_index.value - 1, " ", t.coefficient) # CBF indices start at 0.
                 end
                 println(io)
             end
-            if !iszero(obj.constant)
+            if !iszero(obj_function.constant)
                 println(io, "OBJBCOORD")
-                println(io, obj.constant)
+                println(io, obj_function.constant)
                 println(io)
             end
         else
-            error("Objective function type $F is unsupported.")
+            error("Objective function type $obj_type is not recognized or supported.")
         end
 
         # TODO power cone (parametrized) constraints.
 
         # Non-PSD constraints.
-        ncon = 0 # Number of constraint rows.
-        con = Tuple{String, Int}[] # List of cone types/dimensions.
+        num_rows = 0 # Number of constraint rows.
+        con_cones = Tuple{String, Int}[] # List of cone types/dimensions.
         acoord = Tuple{Int, Int, Float64}[] # Affine terms.
         bcoord = Tuple{Int, Float64}[] # Constant terms.
 
-        for (S, conename) in (
+        for (set_type, cone_str) in (
             (MOI.Zeros, "L="),
             (MOI.Reals, "F"),
             (MOI.Nonnegatives, "L+"),
@@ -118,55 +118,48 @@ function MOI.write_to_file(model::Model, filename::String)
             (MOI.ExponentialCone, "EXP"),
             (MOI.DualExponentialCone, "EXP*"),
             )
-            for ci in getmodelcons(MOI.VectorOfVariables, S)
-                vars = getconfun(ci).variables
-                if S in (MOI.ExponentialCone, MOI.DualExponentialCone)
-                    reverse!(vars) # Reverse order.
+            for con_idx in model_constraints(MOI.VectorOfVariables, set_type)
+                vars = con_function(con_idx).variables
+                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone) # Reverse order.
+                    reverse!(vars)
                 end
                 for vj in vars
-                    ncon += 1
-                    push!(acoord, (ncon, vj.value, 1.0))
+                    num_rows += 1
+                    push!(acoord, (num_rows, vj.value, 1.0))
                 end
-                push!(con, (conename, MOI.dimension(getconset(ci))))
+                push!(con_cones, (cone_str, MOI.dimension(con_set(con_idx))))
             end
 
-            for ci in getmodelcons(MOI.VectorAffineFunction{Float64}, S)
-                fi = getconfun(ci)
-                dim = MOI.dimension(getconset(ci))
-                if S in (MOI.ExponentialCone, MOI.DualExponentialCone)
-                    @assert dim == 3
-                    # Reverse order.
-                    for vt in fi.terms
-                        idx = ncon + 4 - vt.output_index
-                        st = vt.scalar_term
-                        push!(acoord, (idx, st.variable_index.value,
-                            st.coefficient))
+            for con_idx in model_constraints(MOI.VectorAffineFunction{Float64}, set_type)
+                con_func = con_function(con_idx)
+                con_dim = MOI.dimension(con_set(con_idx))
+                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone) # Reverse order.
+                    @assert con_dim == 3
+                    for t in con_func.terms
+                        push!(acoord, (num_rows + 4 - t.output_index, t.scalar_term.variable_index.value, t.scalar_term.coefficient))
                     end
-                    for row in [3,2,1]
-                        ncon += 1
-                        push!(bcoord, (ncon, fi.constants[row]))
+                    for row_constant in reverse(con_func.constants)
+                        num_rows += 1
+                        push!(bcoord, (num_rows, row_constant))
                     end
                 else
-                    for vt in fi.terms
-                        idx = ncon + vt.output_index
-                        st = vt.scalar_term
-                        push!(acoord, (idx, st.variable_index.value,
-                            st.coefficient))
+                    for t in con_func.terms
+                        push!(acoord, (num_rows + t.output_index, t.scalar_term.variable_index.value, t.scalar_term.coefficient))
                     end
-                    for row in 1:dim
-                        ncon += 1
-                        push!(bcoord, (ncon, fi.constants[row]))
+                    for row_constant in con_func.constants
+                        num_rows += 1
+                        push!(bcoord, (num_rows, row_constant))
                     end
                 end
-                push!(con, (conename, dim))
+                push!(con_cones, (cone_str, con_dim))
             end
         end
 
-        if !isempty(con)
+        if !isempty(con_cones)
             println(io, "CON")
-            println(io, ncon, " ", length(con))
-            for (cone, conesize) in con
-                println(io, cone, " ", conesize)
+            println(io, num_rows, " ", length(con_cones))
+            for (cone_str, con_dim) in con_cones
+                println(io, cone_str, " ", con_dim)
             end
             println(io)
         end
@@ -174,8 +167,8 @@ function MOI.write_to_file(model::Model, filename::String)
         if !isempty(acoord)
             println(io, "ACOORD")
             println(io, length(acoord))
-            for (a, b, v) in acoord
-                println(io, a-1, " ", b-1, " ", v)
+            for (row, var, coef) in acoord
+                println(io, row - 1, " ", var - 1, " ", coef) # CBF indices start at 0.
             end
             println(io)
         end
@@ -183,58 +176,55 @@ function MOI.write_to_file(model::Model, filename::String)
         if !isempty(bcoord)
             println(io, "BCOORD")
             println(io, length(bcoord))
-            for (a, v) in bcoord
-                println(io, a-1, " ", v)
+            for (row, constant) in bcoord
+                println(io, row - 1, " ", constant) # CBF indices start at 0.
             end
             println(io)
         end
 
         # PSD constraints.
-        psdcon = Int[] # List of side dimensions.
+        psd_side_dims = Int[] # List of side dimensions.
         hcoord = Tuple{Int, Int, Int, Int, Float64}[] # Affine terms.
         dcoord = Tuple{Int, Int, Int, Float64}[] # Constant terms.
 
-        for ci in getmodelcons(MOI.VectorOfVariables,
-            MOI.PositiveSemidefiniteConeTriangle) # MOI variable constraints.
-            side = getconset(ci).side_dimension
-            push!(psdcon, side)
-            vars = getconfun(ci).variables
+        for con_idx in model_constraints(MOI.VectorOfVariables, MOI.PositiveSemidefiniteConeTriangle) # MOI variable constraints.
+            side_dim = con_set(con_idx).side_dimension
+            push!(psd_side_dims, side_dim)
+            vars = con_function(con_idx).variables
             k = 0
-            for i in 1:side, j in 1:i
+            for i in 1:side_dim, j in 1:i
                 k += 1
-                push!(hcoord, (length(psdcon), vars[k].value, i, j, 1.0))
+                push!(hcoord, (length(psd_side_dims), vars[k].value, i, j, 1.0))
             end
             @assert k == length(vars)
         end
 
-        for ci in getmodelcons(MOI.VectorAffineFunction{Float64},
-            MOI.PositiveSemidefiniteConeTriangle) # MOI affine constraints.
-            side = getconset(ci).side_dimension
-            push!(psdcon, side)
-            fi = getconfun(ci)
-            for vt in fi.terms
-                st = vt.scalar_term
+        for con_idx in model_constraints(MOI.VectorAffineFunction{Float64}, MOI.PositiveSemidefiniteConeTriangle) # MOI affine constraints.
+            side_dim = con_set(con_idx).side_dimension
+            push!(psd_side_dims, side_dim)
+            con_func = con_function(con_idx)
+            for t in con_func.terms
                 # Get (i,j) index in symmetric matrix from lower triangle index.
-                i = div(1 + isqrt(8*vt.output_index - 7), 2)
-                j = vt.output_index - div(i*(i-1), 2)
-                push!(hcoord, (length(psdcon), st.variable_index.value, i, j,
-                    st.coefficient))
+                i = div(1 + isqrt(8 * t.output_index - 7), 2)
+                j = t.output_index - div(i * (i - 1), 2)
+                push!(hcoord, (length(psd_side_dims), t.scalar_term.variable_index.value, i, j, t.scalar_term.coefficient))
             end
             k = 0
-            for i in 1:side, j in 1:i
+            for i in 1:side_dim, j in 1:i
                 k += 1
-                if !iszero(fi.constants[k])
-                    push!(dcoord, (length(psdcon), i, j, fi.constants[k]))
+                row_constant = con_func.constants[k]
+                if !iszero(row_constant)
+                    push!(dcoord, (length(psd_side_dims), i, j, row_constant))
                 end
             end
-            @assert k == MOI.output_dimension(fi)
+            @assert k == MOI.output_dimension(con_func)
         end
 
-        if !isempty(psdcon)
+        if !isempty(psd_side_dims)
             println(io, "PSDCON")
-            println(io, length(psdcon))
-            for v in psdcon
-                println(io, v)
+            println(io, length(psd_side_dims))
+            for side_dim in psd_side_dims
+                println(io, side_dim)
             end
             println(io)
         end
@@ -242,8 +232,8 @@ function MOI.write_to_file(model::Model, filename::String)
         if !isempty(hcoord)
             println(io, "HCOORD")
             println(io, length(hcoord))
-            for (a, b, c, d, v) in hcoord
-                println(io, a-1, " ", b-1, " ", c-1, " ", d-1, " ", v)
+            for (psd_con_idx, var, i, j, coef) in hcoord
+                println(io, psd_con_idx - 1, " ", var - 1, " ", i - 1, " ", j - 1, " ", coef) # CBF indices start at 0.
             end
             println(io)
         end
@@ -251,13 +241,13 @@ function MOI.write_to_file(model::Model, filename::String)
         if !isempty(dcoord)
             println(io, "DCOORD")
             println(io, length(dcoord))
-            for (a, b, c, v) in dcoord
-                println(io, a-1, " ", b-1, " ", c-1, " ", v)
+            for (psd_con_idx, i, j, constant) in dcoord
+                println(io, psd_con_idx - 1, " ", i - 1, " ", j - 1, " ", constant) # CBF indices start at 0.
             end
             println(io)
         end
     end
-    
+
     return
 end
 
@@ -270,116 +260,110 @@ end
 #
 # ==============================================================================
 
-function mattovecidx(i, j)
-    if i < j
-        (i,j) = (j,i)
-    end
-    return div((i-1)*i, 2) + j
-end
+# Convert a pair of row and column indices of a symmetric matrix into a vector index for the row-wise lower triangle
+matrix_to_vector_idx(i::Int, j::Int) = (i < j) ? div((j - 1) * j, 2) + i : div((i - 1) * i, 2) + j
 
 function MOI.read_from_file(model::Model, filename::String)
     if !MOI.is_empty(model)
         error("Cannot read in file because model is not empty.")
     end
 
-    x = MOI.VariableIndex[]
-    X = Vector{MOI.VariableIndex}[]
-    objterms = MOI.ScalarAffineTerm{Float64}[]
-    objconst = 0.0
-    conecons = Tuple{String, Int}[]
-    conterms = Vector{MOI.ScalarAffineTerm{Float64}}[]
-    conconst = Float64[]
-    psdcons = Tuple{Int, Int}[]
-    psdterms = Vector{MOI.ScalarAffineTerm{Float64}}[]
-    psdconst = Float64[]
+    scalar_vars = MOI.VariableIndex[]
+    psd_vars = Vector{MOI.VariableIndex}[]
+    obj_terms = MOI.ScalarAffineTerm{Float64}[]
+    obj_constant = 0.0
+    con_cones = Tuple{String, Int}[]
+    row_terms = Vector{MOI.ScalarAffineTerm{Float64}}[]
+    row_constants = Float64[]
+    psd_side_dims = Int[]
+    psd_cone_dims = Int[]
+    psd_row_terms = Vector{MOI.ScalarAffineTerm{Float64}}[]
+    psd_row_constants = Float64[]
 
     open(filename, "r") do io
         while !eof(io)
             line = strip(readline(io))
 
-            # Comments.
-            if startswith(line, "#") || length(line) == 1
+            # Skip blank lines and comments (CBF comments start with #).
+            if isempty(line) || startswith(line, "#")
                 continue
             end
 
             # CBF version number.
             if startswith(line, "VER")
                 ver = parse(Int, split(strip(readline(io)))[1])
-                if !(ver in (1, 2, 3))
-                    warn("CBF Version number $ver is not yet supported.")
+                if ver < 1 || ver > 3
+                    warn("CBF Version number $ver is not supported (please file an issue on Github).")
                 end
                 continue
             end
 
             # Objective sense.
             if startswith(line, "OBJSENSE")
-                objsense = strip(readline(io))
-                if objsense == "MIN"
+                obj_sense = strip(readline(io))
+                if obj_sense == "MIN"
                     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-                elseif objsense == "MAX"
+                elseif obj_sense == "MAX"
                     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
                 else
-                    error("Objective sense $objsense not recognized")
+                    error("Objective sense $obj_sense not recognized or supported.")
                 end
                 continue
             end
 
             # Non-PSD variable constraints.
             if startswith(line, "VAR")
-                (nvar, nlines) = (parse(Int, strip(i)) for i in
-                    split(strip(readline(io))))
-                append!(x, MOI.add_variables(model, nvar))
-                idx = 0
-                for k in 1:nlines
-                    coneinfo = split(strip(readline(io)))
-                    conename = coneinfo[1]
-                    conelen = parse(Int, coneinfo[2])
-                    if conename == "F" # Free cones (no constraint).
-                        idx += conelen
+                raw_var_info = split(strip(readline(io)))
+                @assert length(raw_var_info) == 2
+                num_var = parse(Int, raw_var_info[1])
+                num_lines = parse(Int, raw_var_info[2])
+                append!(scalar_vars, MOI.add_variables(model, num_var))
+                var_idx = 0
+                for k in 1:num_lines
+                    raw_cone_info = split(strip(readline(io)))
+                    @assert length(raw_cone_info) == 2
+                    cone_str = raw_cone_info[1]
+                    cone_dim = parse(Int, raw_cone_info[2])
+                    if cone_str == "F" # Free cones (no constraint).
+                        var_idx += cone_dim
                         continue
                     end
-                    if conename in ("EXP", "EXP*") # Exponential cones.
-                        @assert conelen == 3
-                        F = MOI.VectorOfVariables(x[idx+3, idx+2, idx+1])
-                        if conename == "EXP"
-                            S = MOI.ExponentialCone()
-                        else
-                            S = MOI.DualExponentialCone()
-                        end
+                    if cone_str in ("EXP", "EXP*") # Exponential cones.
+                        @assert cone_dim == 3
+                        con_func = MOI.VectorOfVariables(scalar_vars[[var_idx + 3, var_idx + 2, var_idx + 1]])
+                        con_set = (cone_str == "EXP") ? MOI.ExponentialCone() : MOI.DualExponentialCone()
                     else
-                        F = MOI.VectorOfVariables(x[idx .+ (1:conelen)])
-                        if conename in ("POWER", "POWER*") # Power cones.
+                        con_func = MOI.VectorOfVariables(scalar_vars[(var_idx + 1):(var_idx + cone_dim)])
+                        if cone_str in ("POWER", "POWER*") # Power cones.
                             error("Power cones are not yet supported.")
-                        elseif conename == "L=" # Zero cones.
-                            S = MOI.Zeros(conelen)
-                        elseif conename == "L-" # Nonpositive cones.
-                            S = MOI.Nonpositives(conelen)
-                        elseif conename == "L+" # Nonnegative cones.
-                            S = MOI.Nonnegatives(conelen)
-                        elseif conename == "Q" # Second-order cones.
-                            @assert conelen >= 3
-                            S = MOI.SecondOrderCone(conelen)
-                        elseif conename == "QR" # Rotated second-order cones.
-                            @assert conelen >= 3
-                            S = MOI.RotatedSecondOrderCone(conelen)
+                        elseif cone_str == "L=" # Zero cones.
+                            con_set = MOI.Zeros(cone_dim)
+                        elseif cone_str == "L-" # Nonpositive cones.
+                            con_set = MOI.Nonpositives(cone_dim)
+                        elseif cone_str == "L+" # Nonnegative cones.
+                            con_set = MOI.Nonnegatives(cone_dim)
+                        elseif cone_str == "Q" # Second-order cones.
+                            @assert cone_dim >= 2
+                            con_set = MOI.SecondOrderCone(cone_dim)
+                        elseif cone_str == "QR" # Rotated second-order cones.
+                            @assert cone_dim >= 3
+                            con_set = MOI.RotatedSecondOrderCone(cone_dim)
                         else
-                            error("cone type $conename is not recognized")
+                            error("CBF cone name $cone_str is not recognized or supported.")
                         end
                     end
-                    @assert MOI.output_dimension(F) == MOI.dimension(S)
-                    MOI.add_constraint(model, F, S)
-                    idx += conelen
+                    MOI.add_constraint(model, con_func, con_set)
+                    var_idx += cone_dim
                 end
-                @assert idx == nvar
+                @assert var_idx == num_var
                 continue
             end
 
             # Integrality constraints.
             if startswith(line, "INT")
                 for k in 1:parse(Int, strip(readline(io)))
-                    idx = parse(Int, strip(readline(io)))
-                    MOI.add_constraint(model, MOI.SingleVariable(x[idx+1]),
-                        MOI.Integer())
+                    var_idx = parse(Int, strip(readline(io))) + 1 # CBF indices start at 0.
+                    MOI.add_constraint(model, MOI.SingleVariable(scalar_vars[var_idx]), MOI.Integer())
                 end
                 continue
             end
@@ -387,14 +371,11 @@ function MOI.read_from_file(model::Model, filename::String)
             # PSD variable constraints.
             if startswith(line, "PSDVAR")
                 for k in 1:parse(Int, strip(readline(io)))
-                    side = parse(Int, strip(readline(io)))
-                    conelen = div(side*(side+1), 2)
-                    Xk = MOI.add_variables(model, conelen)
-                    push!(X, Xk)
-                    F = MOI.VectorOfVariables(Xk)
-                    S = MOI.PositiveSemidefiniteConeTriangle(side)
-                    @assert MOI.output_dimension(F) == MOI.dimension(S)
-                    MOI.add_constraint(model, F, S)
+                    side_dim = parse(Int, strip(readline(io)))
+                    cone_dim = div(side_dim * (side_dim + 1), 2)
+                    psd_vars_k = MOI.add_variables(model, cone_dim)
+                    push!(psd_vars, psd_vars_k)
+                    MOI.add_constraint(model, MOI.VectorOfVariables(psd_vars_k), MOI.PositiveSemidefiniteConeTriangle(side_dim))
                 end
                 continue
             end
@@ -402,85 +383,86 @@ function MOI.read_from_file(model::Model, filename::String)
             # Objective function terms.
             if startswith(line, "OBJFCOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 4
-                    (a, b, c) = (parse(Int, linesplit[i]) + 1 for i in 1:3)
-                    val = parse(Float64, linesplit[end])
-                    if b != c
-                        val += val # scale off-diagonals
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 4
+                    (psd_var_idx, i, j) = (parse(Int, raw_coord[i]) + 1 for i in 1:3) # CBF indices start at 0.
+                    coef = parse(Float64, raw_coord[end])
+                    if i != j
+                        coef += coef # scale off-diagonals
                     end
-                    vidx = mattovecidx(b, c)
-                    push!(objterms, MOI.ScalarAffineTerm(val, X[a][vidx]))
+                    push!(obj_terms, MOI.ScalarAffineTerm(coef, psd_vars[psd_var_idx][matrix_to_vector_idx(i, j)]))
                 end
                 continue
             end
 
             if startswith(line, "OBJACOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 2
-                    a = parse(Int, linesplit[i]) + 1
-                    val = parse(Float64, linesplit[end])
-                    push!(objterms, MOI.ScalarAffineTerm(val, x[a]))
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 2
+                    var_idx = parse(Int, raw_coord[i]) + 1 # CBF indices start at 0.
+                    coef = parse(Float64, raw_coord[end])
+                    push!(obj_terms, MOI.ScalarAffineTerm(coef, scalar_vars[var_idx]))
                 end
                 continue
             end
 
             if startswith(line, "OBJBCOORD")
-                objconst += parse(Float64, strip(readline(io)))
+                obj_constant += parse(Float64, strip(readline(io)))
                 continue
             end
 
             # Non-PSD constraints.
             if startswith(line, "CON")
-                (ncon, nlines) = (parse(Int,
-                    strip(i)) for i in split(strip(readline(io))))
-                idx = 0
-                for k in 1:nlines
-                    coneinfo = split(strip(readline(io)))
-                    conelen = parse(Int, coneinfo[2])
-                    push!(conecons, (coneinfo[1], conelen))
-                    idx += conelen
+                raw_con_info = split(strip(readline(io)))
+                @assert length(raw_con_info) == 2
+                num_rows = parse(Int, raw_con_info[1])
+                num_lines = parse(Int, raw_con_info[2])
+                row_idx = 0
+                for k in 1:num_lines
+                    raw_cone_info = split(strip(readline(io)))
+                    @assert length(raw_cone_info) == 2
+                    cone_str = raw_cone_info[1]
+                    cone_dim = parse(Int, raw_cone_info[2])
+                    push!(con_cones, (cone_str, cone_dim))
+                    row_idx += cone_dim
                 end
-                @assert idx == ncon
-                append!(conterms,
-                    Vector{MOI.ScalarAffineTerm{Float64}}() for i in 1:ncon)
-                append!(conconst, zeros(ncon))
+                @assert row_idx == num_rows
+                append!(row_terms, Vector{MOI.ScalarAffineTerm{Float64}}() for k in 1:num_rows)
+                append!(row_constants, zeros(num_rows))
                 continue
             end
 
             if startswith(line, "FCOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 5
-                    (a, b, c, d) = (parse(Int, linesplit[i]) + 1 for i in 1:4)
-                    val = parse(Float64, linesplit[end])
-                    if c != d
-                        val += val # scale off-diagonals
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 5
+                    (row_idx, psd_var_idx, i, j) = (parse(Int, raw_coord[i]) + 1 for i in 1:4) # CBF indices start at 0.
+                    coef = parse(Float64, raw_coord[end])
+                    if i != j
+                        coef += coef # scale off-diagonals
                     end
-                    vidx = mattovecidx(c, d)
-                    push!(conterms[a], MOI.ScalarAffineTerm(val, X[b][vidx]))
+                    push!(row_terms[row_idx], MOI.ScalarAffineTerm(val, psd_vars[psd_var_idx][matrix_to_vector_idx(i, j)]))
                 end
                 continue
             end
 
             if startswith(line, "ACOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 3
-                    (a, b) = (parse(Int, linesplit[i]) + 1 for i in 1:2)
-                    val = parse(Float64, linesplit[end])
-                    push!(conterms[a], MOI.ScalarAffineTerm(val, x[b]))
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 3
+                    (row_idx, var_idx) = (parse(Int, raw_coord[i]) + 1 for i in 1:2) # CBF indices start at 0.
+                    coef = parse(Float64, raw_coord[end])
+                    push!(row_terms[row_idx], MOI.ScalarAffineTerm(coef, scalar_vars[var_idx]))
                 end
                 continue
             end
 
             if startswith(line, "BCOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 2
-                    a = parse(Int, linesplit[1]) + 1
-                    conconst[a] = parse(Float64, linesplit[end])
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 2
+                    row_idx = parse(Int, raw_coord[1]) + 1 # CBF indices start at 0.
+                    row_constants[row_idx] = parse(Float64, raw_coord[end])
                 end
                 continue
             end
@@ -489,35 +471,35 @@ function MOI.read_from_file(model::Model, filename::String)
             if startswith(line, "PSDCON")
                 idx = 0
                 for k in 1:parse(Int, strip(readline(io)))
-                    side = parse(Int, strip(readline(io)))
-                    push!(psdcons, (side, idx))
-                    idx += div(side*(side+1), 2)
+                    side_dim = parse(Int, strip(readline(io)))
+                    push!(psd_side_dims, side_dim)
+                    push!(psd_cone_dims, idx)
+                    idx += div(side_dim * (side_dim + 1), 2)
                 end
-                append!(psdterms,
-                    Vector{MOI.ScalarAffineTerm{Float64}}() for i in 1:idx)
-                append!(psdconst, zeros(idx))
+                append!(psd_row_terms, Vector{MOI.ScalarAffineTerm{Float64}}() for i in 1:idx)
+                append!(psd_row_constants, zeros(idx))
                 continue
             end
 
             if startswith(line, "HCOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 5
-                    (a, b, c, d) = (parse(Int, linesplit[i]) + 1 for i in 1:4)
-                    val = parse(Float64, linesplit[end])
-                    cidx = psdcons[a][2] + mattovecidx(c, d)
-                    push!(psdterms[cidx], MOI.ScalarAffineTerm(val, x[b]))
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 5
+                    (psd_con_idx, var_idx, i, j) = (parse(Int, raw_coord[i]) + 1 for i in 1:4) # CBF indices start at 0.
+                    coef = parse(Float64, raw_coord[end])
+                    row_idx = psd_cone_dims[psd_con_idx] + matrix_to_vector_idx(i, j)
+                    push!(psd_row_terms[row_idx], MOI.ScalarAffineTerm(coef, scalar_vars[var_idx]))
                 end
                 continue
             end
 
             if startswith(line, "DCOORD")
                 for k in 1:parse(Int, strip(readline(io)))
-                    linesplit = split(strip(readline(io)))
-                    @assert length(linesplit) == 4
-                    (a, b, c) = (parse(Int, linesplit[i]) + 1 for i in 1:3)
-                    cidx = psdcons[a][2] + mattovecidx(b, c)
-                    psdconst[cidx] += parse(Float64, linesplit[end])
+                    raw_coord = split(strip(readline(io)))
+                    @assert length(raw_coord) == 4
+                    (psd_con_idx, i, j) = (parse(Int, raw_coord[i]) + 1 for i in 1:3) # CBF indices start at 0.
+                    row_idx = psd_cone_dims[psd_con_idx] + matrix_to_vector_idx(i, j)
+                    psd_row_constants[row_idx] += parse(Float64, raw_coord[end])
                 end
                 continue
             end
@@ -525,61 +507,51 @@ function MOI.read_from_file(model::Model, filename::String)
     end
 
     # Objective function.
-    MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),
-        MOI.ScalarAffineFunction(objterms, objconst))
+    MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), MOI.ScalarAffineFunction(obj_terms, obj_constant))
 
     # Non-PSD constraints.
-    idx = 0
-    for (conename, conelen) in conecons
-        if conename == "F" # Free cones (no constraint).
-            idx += conelen
+    row_idx = 0
+    for (cone_str, cone_dim) in con_cones
+        if cone_str == "F" # Free cones (no constraint).
+            row_idx += cone_dim
             continue
         end
-        if conename in ("EXP", "EXP*") # Exponential cones.
-            @assert conelen == 3
-            vats = [MOI.VectorAffineTerm(4-l, t) for l in 1:conelen
-                for t in conterms[idx+l]]
-            F = MOI.VectorAffineFunction(vats, conconst[[idx+3, idx+2, idx+1]])
-            if conename == "EXP"
-                S = MOI.ExponentialCone()
-            else
-                S = MOI.DualExponentialCone()
-            end
+        if cone_str in ("EXP", "EXP*") # Exponential cones.
+            @assert cone_dim == 3
+            con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm(4 - l, t) for l in 1:cone_dim for t in row_terms[row_idx + l]], row_constants[[row_idx + 3, row_idx + 2, row_idx + 1]])
+            con_set = (cone_str == "EXP") ? MOI.ExponentialCone() : MOI.DualExponentialCone()
         else
-            vats = [MOI.VectorAffineTerm(l, t) for l in 1:conelen
-                for t in conterms[idx+l]]
-            F = MOI.VectorAffineFunction(vats, conconst[idx .+ (1:conelen)])
-            if conename in ("POWER", "POWER*") # Power cones.
+            con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm(l, t) for l in 1:cone_dim for t in row_terms[row_idx + l]], row_constants[(row_idx + 1):(row_idx + cone_dim)])
+            if cone_str in ("POWER", "POWER*") # Power cones.
                 error("Power cones are not yet supported.")
-            elseif conename == "L=" # Zero cones.
-                S = MOI.Zeros(conelen)
-            elseif conename == "L-" # Nonpositive cones.
-                S = MOI.Nonpositives(conelen)
-            elseif conename == "L+" # Nonnegative cones.
-                S = MOI.Nonnegatives(conelen)
-            elseif conename == "Q" # Second-order cones.
-                @assert conelen >= 3
-                S = MOI.SecondOrderCone(conelen)
-            elseif conename == "QR" # Rotated second-order cones.
-                @assert conelen >= 3
-                S = MOI.RotatedSecondOrderCone(conelen)
+            elseif cone_str == "L=" # Zero cones.
+                con_set = MOI.Zeros(cone_dim)
+            elseif cone_str == "L-" # Nonpositive cones.
+                con_set = MOI.Nonpositives(cone_dim)
+            elseif cone_str == "L+" # Nonnegative cones.
+                con_set = MOI.Nonnegatives(cone_dim)
+            elseif cone_str == "Q" # Second-order cones.
+                @assert cone_dim >= 2
+                con_set = MOI.SecondOrderCone(cone_dim)
+            elseif cone_str == "QR" # Rotated second-order cones.
+                @assert cone_dim >= 3
+                con_set = MOI.RotatedSecondOrderCone(cone_dim)
             else
-                error("cone type $conename is not recognized")
+                error("CBF cone name $cone_str is not recognized or supported.")
             end
         end
-        MOI.add_constraint(model, F, S)
-        idx += conelen
+        MOI.add_constraint(model, con_func, con_set)
+        row_idx += cone_dim
     end
 
     # PSD constraints.
-    idx = 0
-    for (side, conelen) in psdcons
-        vats = [MOI.VectorAffineTerm(l, t) for l in 1:conelen
-            for t in psdterms[idx+l]]
-        F = MOI.VectorAffineFunction(vats, psdconst[idx .+ (1:conelen)])
-        S = MOI.PositiveSemidefiniteConeTriangle(side)
-        MOI.add_constraint(model, F, S)
-        idx += conelen
+    row_idx = 0
+    for psd_con_idx in eachindex(psd_side_dims)
+        cone_dim = psd_cone_dims[psd_con_idx]
+        con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm(l, t) for l in 1:cone_dim for t in psd_row_terms[row_idx + l]], psd_row_constants[(row_idx + 1):(row_idx + cone_dim)])
+        con_set = MOI.PositiveSemidefiniteConeTriangle(psd_side_dims[psd_con_idx])
+        MOI.add_constraint(model, con_func, con_set)
+        row_idx += cone_dim
     end
 
     return
