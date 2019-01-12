@@ -424,7 +424,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 2
-                    var_idx = parse(Int, raw_coord[i]) + 1 # CBF indices start at 0.
+                    var_idx = parse(Int, raw_coord[1]) + 1 # CBF indices start at 0.
                     coef = parse(Float64, raw_coord[end])
                     push!(obj_terms, MOI.ScalarAffineTerm(coef,
                         scalar_vars[var_idx]))
