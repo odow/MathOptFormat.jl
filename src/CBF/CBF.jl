@@ -311,7 +311,7 @@ function MOI.read_from_file(model::Model, filename::String)
             if startswith(line, "VER")
                 ver = parse(Int, split(strip(readline(io)))[1])
                 if ver < 1 || ver > 3
-                    warn("CBF Version number $ver is not supported (please file an issue on Github).")
+                    error("CBF version number $ver is not yet supported by MathOptFormat.")
                 end
                 continue
             end
