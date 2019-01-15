@@ -79,27 +79,85 @@ end
         """)
     end
 
-    @testset "VectorAffine-in-Nonnegatives" begin
+    @testset "Integer" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: 1.2x
+            c1: y in Integer()
+        """)
+    end
+
+    @testset "Nonnegatives" begin
         test_model_equality("""
             variables: x, y
             minobjective: 1.2x
             c1: [1.1 * x, y + 1] in Nonnegatives(2)
         """)
     end
-    @testset "VectorAffine-in-Nonpositives" begin
+    @testset "Nonpositives" begin
         test_model_equality("""
             variables: x
             minobjective: 1.2x
             c1: [-1.1 * x + 1] in Nonpositives(1)
         """)
     end
-    @testset "VectorAffine-in-Zeros" begin
+    @testset "Zeros" begin
         test_model_equality("""
             variables: x, y
             minobjective: 1.2x
             c1: [x + 2y + -1.1, 0] in Zeros(2)
         """)
     end
+
+    @testset "SecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in SecondOrderCone(3)
+        """)
+    end
+    @testset "RotatedSecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in RotatedSecondOrderCone(3)
+        """)
+    end
+    @testset "PositiveSemidefiniteConeTriangle" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in PositiveSemidefiniteConeTriangle(2)
+        """)
+    end
+    @testset "DualExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in DualExponentialCone()
+        """)
+    end
+    @testset "ExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in ExponentialCone()
+        """)
+    end
+    # @testset "PowerCone" begin
+    #     test_model_equality("""
+    #         variables: x, y, z
+    #         minobjective: 1.2x
+    #         c1: [1.1x, y + 1, 2x + z] in PowerCone(2.0)
+    #     """)
+    # end
+    # @testset "DualPowerCone" begin
+    #     test_model_equality("""
+    #         variables: x, y, z
+    #         minobjective: 1.2x
+    #         c1: [1.1x, y + 1, 2x + z] in DualPowerCone(2.0)
+    #     """)
+    # end
 end
 
 # Clean up.
