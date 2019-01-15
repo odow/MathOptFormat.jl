@@ -123,11 +123,15 @@ function MOI.write_to_file(model::Model, filename::String)
             for con_idx in model_cons(MOI.VectorOfVariables, set_type)
                 vars = con_function(con_idx).variables
                 if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone) # Reverse order.
-                    reverse!(vars)
-                end
-                for vj in vars
-                    num_rows += 1
-                    push!(acoord, (num_rows, vj.value, 1.0))
+                    for vj in reverse(vars)
+                        num_rows += 1
+                        push!(acoord, (num_rows, vj.value, 1.0))
+                    end
+                else
+                    for vj in vars
+                        num_rows += 1
+                        push!(acoord, (num_rows, vj.value, 1.0))
+                    end
                 end
                 push!(con_cones, (cone_str, MOI.dimension(con_set(con_idx))))
             end
@@ -548,10 +552,6 @@ function MOI.read_from_file(model::Model, filename::String)
     # Non-PSD constraints.
     row_idx = 0
     for (cone_str, cone_dim) in con_cones
-        if cone_str == "F" # Free cones (no constraint).
-            row_idx += cone_dim
-            continue
-        end
         if cone_str in ("EXP", "EXP*") # Exponential cones.
             @assert cone_dim == 3
             con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm{Float64}(
@@ -565,6 +565,8 @@ function MOI.read_from_file(model::Model, filename::String)
                 row_constants[(row_idx + 1):(row_idx + cone_dim)])
             if cone_str in ("POWER", "POWER*") # Power cones.
                 error("Power cones are not yet supported.")
+            elseif cone_str == "F" # Free cones (redundant but add anyway).
+                con_set = MOI.Reals(cone_dim)
             elseif cone_str == "L=" # Zero cones.
                 con_set = MOI.Zeros(cone_dim)
             elseif cone_str == "L-" # Nonpositive cones.

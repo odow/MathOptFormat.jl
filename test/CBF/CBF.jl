@@ -1,3 +1,8 @@
+
+import Base
+Base.isapprox(f::MOI.VectorOfVariables, g::MOI.VectorAffineFunction{Float64};
+    kwargs...) = isapprox(MOI.VectorAffineFunction{Float64}(f), g)
+
 const CBF = MathOptFormat.CBF
 
 const CBF_TEST_FILE = "test.cbf"
@@ -43,7 +48,7 @@ end
         model = CBF.Model()
         MOI.add_variable(model)
         @test_throws Exception MOI.read_from_file(model,
-            joinpath(failing_models_dir, "bad_name.cbf"))
+            joinpath(failing_models_dir, "incompatible_version.cbf"))
     end
 
     @testset "$(filename)" for filename in filter(f -> endswith(f, ".cbf"),
@@ -52,6 +57,14 @@ end
             joinpath(failing_models_dir, filename))
     end
 end
+
+# TODO scalar function in Integer fail test
+
+# TODO quadratic objective not supported test
+
+# TODO NLP not supported test
+
+# TODO Feasibility sense not supported test
 
 @testset "Round trips" begin
     @testset "min SingleVariable" begin
@@ -79,7 +92,7 @@ end
         """)
     end
 
-    @testset "Integer" begin
+    @testset "SingleVariable in Integer" begin
         test_model_equality("""
             variables: x, y
             minobjective: 1.2x
@@ -87,77 +100,163 @@ end
         """)
     end
 
-    @testset "Nonnegatives" begin
+    @testset "VectorOfVariables in Nonnegatives" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in Nonnegatives(2)
+        """)
+    end
+    @testset "VectorOfVariables in Nonpositives" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [y, x] in Nonpositives(2)
+        """)
+    end
+    @testset "VectorOfVariables in Zeros" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, x] in Zeros(2)
+        """)
+    end
+    @testset "VectorOfVariables in Reals" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in Reals(2)
+        """)
+    end
+
+    @testset "VectorAffineFunction in Nonnegatives" begin
         test_model_equality("""
             variables: x, y
             minobjective: 1.2x
             c1: [1.1 * x, y + 1] in Nonnegatives(2)
         """)
     end
-    @testset "Nonpositives" begin
+    @testset "VectorAffineFunction in Nonpositives" begin
         test_model_equality("""
             variables: x
             minobjective: 1.2x
             c1: [-1.1 * x + 1] in Nonpositives(1)
         """)
     end
-    @testset "Zeros" begin
+    @testset "VectorAffineFunction in Zeros" begin
         test_model_equality("""
             variables: x, y
             minobjective: 1.2x
             c1: [x + 2y + -1.1, 0] in Zeros(2)
         """)
     end
+    @testset "VectorAffineFunction in Reals" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: 1.2x
+            c1: [1x, 2y] in Reals(2)
+        """)
+    end
 
-    @testset "SecondOrderCone" begin
+    @testset "VectorOfVariables in SecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in SecondOrderCone(3)
+        """)
+    end
+    @testset "VectorOfVariables in RotatedSecondOrderCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in RotatedSecondOrderCone(3)
+        """)
+    end
+    @testset "VectorOfVariables in ExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in ExponentialCone()
+        """)
+    end
+    @testset "VectorOfVariables in DualExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in DualExponentialCone()
+        """)
+    end
+    # @testset "VectorOfVariables in PowerCone" begin
+    #     test_model_equality("""
+    #         variables: x, y, z
+    #         minobjective: x
+    #         c1: [x, y, z] in PowerCone(2.0)
+    #     """)
+    # end
+    # @testset "VectorOfVariables in DualPowerCone" begin
+    #     test_model_equality("""
+    #         variables: x, y, z
+    #         minobjective: x
+    #         c1: [x, y, z] in DualPowerCone(2.0)
+    #     """)
+    # end
+    @testset "VectorOfVariables in PositiveSemidefiniteConeTriangle" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: x
+            c1: [x, y, z] in PositiveSemidefiniteConeTriangle(2)
+        """)
+    end
+
+    @testset "VectorAffineFunction in SecondOrderCone" begin
         test_model_equality("""
             variables: x, y, z
             minobjective: 1.2x
             c1: [1.1x, y + 1, 2x + z] in SecondOrderCone(3)
         """)
     end
-    @testset "RotatedSecondOrderCone" begin
+    @testset "VectorAffineFunction in RotatedSecondOrderCone" begin
         test_model_equality("""
             variables: x, y, z
             minobjective: 1.2x
             c1: [1.1x, y + 1, 2x + z] in RotatedSecondOrderCone(3)
         """)
     end
-    @testset "PositiveSemidefiniteConeTriangle" begin
-        test_model_equality("""
-            variables: x, y, z
-            minobjective: 1.2x
-            c1: [1.1x, y + 1, 2x + z] in PositiveSemidefiniteConeTriangle(2)
-        """)
-    end
-    @testset "DualExponentialCone" begin
-        test_model_equality("""
-            variables: x, y, z
-            minobjective: 1.2x
-            c1: [1.1x, y + 1, 2x + z] in DualExponentialCone()
-        """)
-    end
-    @testset "ExponentialCone" begin
+    @testset "VectorAffineFunction in ExponentialCone" begin
         test_model_equality("""
             variables: x, y, z
             minobjective: 1.2x
             c1: [1.1x, y + 1, 2x + z] in ExponentialCone()
         """)
     end
-    # @testset "PowerCone" begin
+    @testset "VectorAffineFunction in DualExponentialCone" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in DualExponentialCone()
+        """)
+    end
+    # @testset "VectorAffineFunction in PowerCone" begin
     #     test_model_equality("""
     #         variables: x, y, z
     #         minobjective: 1.2x
     #         c1: [1.1x, y + 1, 2x + z] in PowerCone(2.0)
     #     """)
     # end
-    # @testset "DualPowerCone" begin
+    # @testset "VectorAffineFunction in DualPowerCone" begin
     #     test_model_equality("""
     #         variables: x, y, z
     #         minobjective: 1.2x
     #         c1: [1.1x, y + 1, 2x + z] in DualPowerCone(2.0)
     #     """)
     # end
+    @testset "VectorAffineFunction in PositiveSemidefiniteConeTriangle" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 1.2x
+            c1: [1.1x, y + 1, 2x + z] in PositiveSemidefiniteConeTriangle(2)
+        """)
+    end
 end
 
 # Clean up.
