@@ -95,6 +95,29 @@ end
     MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
 end
 
+@testset "Read example C" begin
+    model_string = "
+        variables: a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p
+        maxobjective: a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + -1
+        c1: [b] in Zeros(1)
+        c2: [c] in Nonnegatives(1)
+        c3: [d] in Nonpositives(1)
+        c4: [e, f, g] in SecondOrderCone(3)
+        c5: [h, i, j] in RotatedSecondOrderCone(3)
+        c6: [m, l, k] in ExponentialCone()
+        c7: [p, o, n] in DualExponentialCone()
+    "
+    model1 = CBF.Model()
+    MOIU.loadfromstring!(model1, model_string)
+    (variable_names, constraint_names) = set_names(model1)
+
+    model2 = CBF.Model()
+    MOI.read_from_file(model2, joinpath(MODELS_DIR, "example_C.cbf"))
+    set_names(model2)
+
+    MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
+end
+
 # TODO quadratic objective not supported test
 
 # TODO NLP not supported test
