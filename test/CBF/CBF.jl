@@ -13,12 +13,11 @@ function set_names(model)
     end
 
     constraint_names = String[]
-    for (con_func, con_set) in MOI.get(model, MOI.ListOfConstraints())
-        for i in MOI.get(model, MOI.ListOfConstraintIndices{con_func, con_set}())
-            con_name_i = "c" * string(i.value)
-            push!(constraint_names, con_name_i)
-            MOI.set(model, MOI.ConstraintName(), i, con_name_i)
-        end
+    for (con_func, con_set) in MOI.get(model, MOI.ListOfConstraints()),
+        i in MOI.get(model, MOI.ListOfConstraintIndices{con_func, con_set}())
+        con_name_i = "c" * string(i.value)
+        push!(constraint_names, con_name_i)
+        MOI.set(model, MOI.ConstraintName(), i, con_name_i)
     end
 
     return (variable_names, constraint_names)
@@ -43,12 +42,12 @@ end
     @testset "Non-empty model" begin
         model = CBF.Model()
         MOI.add_variable(model)
-        @test_throws Exception MOI.read_from_file(
-            model, joinpath(failing_models_dir, "bad_name.cbf"))
+        @test_throws Exception MOI.read_from_file(model,
+            joinpath(failing_models_dir, "bad_name.cbf"))
     end
 
-    @testset "$(filename)" for filename in filter(
-        f -> endswith(f, ".cbf"), readdir(failing_models_dir))
+    @testset "$(filename)" for filename in filter(f -> endswith(f, ".cbf"),
+        readdir(failing_models_dir))
         @test_throws Exception MOI.read_from_file(CBF.Model(),
             joinpath(failing_models_dir, filename))
     end
