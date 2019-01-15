@@ -30,7 +30,6 @@ function test_model_equality(model_string)
     (variable_names, constraint_names) = set_names(model)
 
     MOI.write_to_file(model, CBF_TEST_FILE)
-    # println(read(CBF_TEST_FILE, String))
     model_2 = CBF.Model()
     MOI.read_from_file(model_2, CBF_TEST_FILE)
     set_names(model_2)
@@ -55,48 +54,51 @@ end
     end
 end
 
-@testset "Maximization problems" begin
-    model = CBF.Model()
-    x = MOI.add_variable(model)
-    MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
-    MOI.set(model, MOI.ObjectiveFunction{MOI.SingleVariable}(),
-        MOI.SingleVariable(x))
-end
-
 @testset "Round trips" begin
-    @testset "min objective" begin
+    @testset "min SingleVariable" begin
         test_model_equality("""
             variables: x
             minobjective: x
         """)
     end
-
-    @testset "min VectorAffine" begin
+    @testset "min ScalarAffine" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: 1.2x + -1y + 1
+        """)
+    end
+    @testset "max SingleVariable" begin
         test_model_equality("""
             variables: x
-            minobjective: 1.2x
+            maxobjective: x
+        """)
+    end
+    @testset "max ScalarAffine" begin
+        test_model_equality("""
+            variables: x, y
+            maxobjective: 1.2x + -1y + 1
         """)
     end
 
     @testset "VectorAffine-in-Nonnegatives" begin
         test_model_equality("""
-            variables: x
+            variables: x, y
             minobjective: 1.2x
-            c1: [1.1 * x] in Nonnegatives(1)
+            c1: [1.1 * x, y + 1] in Nonnegatives(2)
         """)
     end
     @testset "VectorAffine-in-Nonpositives" begin
         test_model_equality("""
             variables: x
             minobjective: 1.2x
-            c1: [1.1 * x] in Nonpositives(1)
+            c1: [-1.1 * x + 1] in Nonpositives(1)
         """)
     end
     @testset "VectorAffine-in-Zeros" begin
         test_model_equality("""
-            variables: x
+            variables: x, y
             minobjective: 1.2x
-            c1: [1.1 * x] in Zeros(1)
+            c1: [x + 2y + -1.1, 0] in Zeros(2)
         """)
     end
 end
