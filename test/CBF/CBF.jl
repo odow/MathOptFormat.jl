@@ -6,8 +6,8 @@ Base.isapprox(f::MOI.VectorOfVariables, g::MOI.VectorAffineFunction{Float64};
 const CBF = MathOptFormat.CBF
 
 const CBF_TEST_FILE = "test.cbf"
+const MODELS_DIR = joinpath(@__DIR__, "models")
 
-@test sprint(show, CBF.Model()) == "A Conic Benchmark Format (CBF) model"
 
 function set_names(model)
     variable_names = String[]
@@ -29,36 +29,71 @@ function set_names(model)
 end
 
 function test_model_equality(model_string)
+    model1 = CBF.Model()
+    MOIU.loadfromstring!(model1, model_string)
+    (variable_names, constraint_names) = set_names(model1)
+
+    MOI.write_to_file(model1, CBF_TEST_FILE)
+    model2 = CBF.Model()
+    MOI.read_from_file(model2, CBF_TEST_FILE)
+    set_names(model2)
+
+    MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
+end
+
+
+@test sprint(show, CBF.Model()) == "A Conic Benchmark Format (CBF) model"
+
+@testset "Non-empty model error" begin
     model = CBF.Model()
-    MOIU.loadfromstring!(model, model_string)
-    (variable_names, constraint_names) = set_names(model)
-
-    MOI.write_to_file(model, CBF_TEST_FILE)
-    model_2 = CBF.Model()
-    MOI.read_from_file(model_2, CBF_TEST_FILE)
-    set_names(model_2)
-
-    MOIU.test_models_equal(model, model_2, variable_names, constraint_names)
+    MOI.add_variable(model)
+    @test_throws Exception MOI.read_from_file(model,
+        joinpath(MODELS_DIR, "example1.cbf"))
 end
 
-@testset "Errors" begin
-    failing_models_dir = joinpath(@__DIR__, "failing_models")
-
-    @testset "Non-empty model" begin
-        model = CBF.Model()
-        MOI.add_variable(model)
-        @test_throws Exception MOI.read_from_file(model,
-            joinpath(failing_models_dir, "incompatible_version.cbf"))
-    end
-
-    @testset "$(filename)" for filename in filter(f -> endswith(f, ".cbf"),
-        readdir(failing_models_dir))
-        @test_throws Exception MOI.read_from_file(CBF.Model(),
-            joinpath(failing_models_dir, filename))
-    end
+@testset "Incompatible version error" begin
+    model = CBF.Model()
+    @test_throws Exception MOI.read_from_file(model,
+        joinpath(MODELS_DIR, "incompatible_version.cbf"))
 end
 
-# TODO scalar function in Integer fail test
+@testset "Read example A" begin
+    model_string = "
+        variables: U, V, W, X, Y, Z, x, y, z
+        minobjective: y + 2U + 2V + 2W + 2Y + 2Z
+        c1: [U, V, W, X, Y, Z] in PositiveSemidefiniteConeTriangle(3)
+        c2: [y + U + W + Z + -1, x + z + U + 2V + W + 2X + 2Y + Z + -0.5] in Zeros(2)
+        c3: [y, x, z] in SecondOrderCone(3)
+    "
+    model1 = CBF.Model()
+    MOIU.loadfromstring!(model1, model_string)
+    (variable_names, constraint_names) = set_names(model1)
+
+    model2 = CBF.Model()
+    MOI.read_from_file(model2, joinpath(MODELS_DIR, "example_A.cbf"))
+    set_names(model2)
+
+    MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
+end
+
+@testset "Read example B" begin
+    model_string = "
+        variables: X, Y, Z, x, y
+        minobjective: 1 + x + y + X + Z
+        c1: [X, Y, Z] in PositiveSemidefiniteConeTriangle(2)
+        c2: [2Y + -1x + -1y] in Nonnegatives(1)
+        c3: [3y + -1, x + y, 3x + -1] in PositiveSemidefiniteConeTriangle(2)
+    "
+    model1 = CBF.Model()
+    MOIU.loadfromstring!(model1, model_string)
+    (variable_names, constraint_names) = set_names(model1)
+
+    model2 = CBF.Model()
+    MOI.read_from_file(model2, joinpath(MODELS_DIR, "example_B.cbf"))
+    set_names(model2)
+
+    MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
+end
 
 # TODO quadratic objective not supported test
 

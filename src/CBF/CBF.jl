@@ -473,8 +473,8 @@ function MOI.read_from_file(model::Model, filename::String)
                     if i != j
                         coef += coef # scale off-diagonals
                     end
-                    push!(row_terms[row_idx], MOI.ScalarAffineTerm{Float64}(val,
-                        psd_vars[psd_var_idx][mat_to_vec_idx(i, j)]))
+                    push!(row_terms[row_idx], MOI.ScalarAffineTerm{Float64}(
+                        coef, psd_vars[psd_var_idx][mat_to_vec_idx(i, j)]))
                 end
                 continue
             end
