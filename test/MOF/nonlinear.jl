@@ -47,7 +47,7 @@ end
                 replace(read(joinpath(@__DIR__, "nlp.mof.json"), String), '\r' => "")
         else
             @test replace(readstring(TEST_MOF_FILE), '\r', "") ==
-                replace(readstring(joinpath(@__DIR__, "MOF/nlp.mof.json")), '\r', "")
+                replace(readstring(joinpath(@__DIR__, "nlp.mof.json")), '\r', "")
         end
     end
     @testset "Error handling" begin
