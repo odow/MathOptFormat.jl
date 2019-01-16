@@ -5,7 +5,7 @@ VER
 POWCONES
 2 4
 2
-3.0
+4.0
 1.0
 2
 1.0
@@ -18,7 +18,7 @@ POW*CONES
 1.0
 2
 1.0
-1.0
+9.0
 
 OBJSENSE
 MAX
@@ -27,6 +27,12 @@ VAR
 6 2
 @1:POW 3
 @1:POW* 3
+
+INT
+3
+0
+2
+4
 
 CON
 6 2

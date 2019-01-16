@@ -21,10 +21,7 @@ MOIU.@model(InnerCBFModel,
 
 const Model = InnerCBFModel{Float64}
 
-function Base.show(io::IO, ::Model)
-    print(io, "A Conic Benchmark Format (CBF) model")
-    return
-end
+Base.show(io::IO, ::Model) = print(io, "A Conic Benchmark Format (CBF) model")
 
 # ==============================================================================
 #
@@ -41,12 +38,48 @@ function MOI.write_to_file(model::Model, filename::String)
 
     # Write to file.
     open(filename, "w") do io
-        println(io, "# ", MOI.get(model, MOI.Name())) # Name into CBF comments.
-        println(io)
+        model_name = MOI.get(model, MOI.Name())
+        if !isempty(model_name)
+            println(io, "# ", model_name) # Name into CBF comment.
+            println(io)
+        end
 
         println(io, "VER") # CBF version number.
         println(io, 3)
         println(io)
+
+        # Power cone parameters.
+        powcone_cons = vcat(model_cons(MOI.VectorOfVariables,
+            MOI.PowerCone{Float64}), model_cons(
+            MOI.VectorAffineFunction{Float64}, MOI.PowerCone{Float64}))
+        if !isempty(powcone_cons)
+            println(io, "POWCONES")
+            num_powcones = length(powcone_cons)
+            println(io, num_powcones, " ", 2 * num_powcones)
+            for powcone in powcone_cons
+                println(io, 2)
+                powcone_param = con_set(powcone).exponent
+                println(io, powcone_param)
+                println(io, 1.0 - powcone_param)
+            end
+            println(io)
+        end
+
+        dpowcone_cons = vcat(model_cons(MOI.VectorOfVariables,
+            MOI.DualPowerCone{Float64}), model_cons(
+            MOI.VectorAffineFunction{Float64}, MOI.DualPowerCone{Float64}))
+        if !isempty(dpowcone_cons)
+            println(io, "POW*CONES")
+            num_powcones = length(dpowcone_cons)
+            println(io, num_powcones, " ", 2 * num_powcones)
+            for powcone in dpowcone_cons
+                println(io, 2)
+                powcone_param = con_set(powcone).exponent
+                println(io, powcone_param)
+                println(io, 1.0 - powcone_param)
+            end
+            println(io)
+        end
 
         # Objective sense.
         println(io, "OBJSENSE")
@@ -54,7 +87,7 @@ function MOI.write_to_file(model::Model, filename::String)
         if obj_sense == MOI.MAX_SENSE
             println(io, "MAX")
         else
-            println(io, "MIN") # Includes the case of MOI.FeasibilitySense.
+            println(io, "MIN") # Includes the case of feasibility sense.
         end
         println(io)
 
@@ -111,6 +144,8 @@ function MOI.write_to_file(model::Model, filename::String)
         con_cones = Tuple{String, Int}[] # List of cone types/dimensions.
         acoord = Tuple{Int, Int, Float64}[] # Affine terms.
         bcoord = Tuple{Int, Float64}[] # Constant terms.
+        powcone_idx = 0
+        dpowcone_idx = 0
 
         for (set_type, cone_str) in (
             (MOI.Zeros, "L="),
@@ -121,6 +156,8 @@ function MOI.write_to_file(model::Model, filename::String)
             (MOI.RotatedSecondOrderCone, "QR"),
             (MOI.ExponentialCone, "EXP"),
             (MOI.DualExponentialCone, "EXP*"),
+            (MOI.PowerCone{Float64}, ""),
+            (MOI.DualPowerCone{Float64}, ""),
             )
             for con_idx in model_cons(MOI.VectorOfVariables, set_type)
                 vars = con_function(con_idx).variables
@@ -134,6 +171,13 @@ function MOI.write_to_file(model::Model, filename::String)
                         num_rows += 1
                         push!(acoord, (num_rows, vj.value, 1.0))
                     end
+                end
+                if set_type == MOI.PowerCone{Float64}
+                    cone_str = "@$(powcone_idx):POW"
+                    powcone_idx += 1
+                elseif set_type == MOI.DualPowerCone{Float64}
+                    cone_str = "@$(dpowcone_idx):POW*"
+                    dpowcone_idx += 1
                 end
                 push!(con_cones, (cone_str, MOI.dimension(con_set(con_idx))))
             end
@@ -162,6 +206,13 @@ function MOI.write_to_file(model::Model, filename::String)
                         num_rows += 1
                         push!(bcoord, (num_rows, row_constant))
                     end
+                end
+                if set_type == MOI.PowerCone{Float64}
+                    cone_str = "@$(powcone_idx):POW"
+                    powcone_idx += 1
+                elseif set_type == MOI.DualPowerCone{Float64}
+                    cone_str = "@$(dpowcone_idx):POW*"
+                    dpowcone_idx += 1
                 end
                 push!(con_cones, (cone_str, con_dim))
             end
@@ -333,6 +384,9 @@ function MOI.read_from_file(model::Model, filename::String)
                 alpha_idx = 0
                 for j in 1:num_powcone
                     num_alphas = parse(Int, strip(readline(io)))
+                    if num_alphas != 2
+                        error("Only 3-dimensional power cones are supported.")
+                    end
                     push!(powcone_alphas, [parse(Float64, strip(readline(io)))
                         for k in 1:num_alphas])
                     alpha_idx += num_alphas
@@ -350,6 +404,9 @@ function MOI.read_from_file(model::Model, filename::String)
                 alpha_idx = 0
                 for j in 1:num_powcone
                     num_alphas = parse(Int, strip(readline(io)))
+                    if num_alphas != 2
+                        error("Only 3-dimensional dual power cones are supported.")
+                    end
                     push!(dpowcone_alphas, [parse(Float64, strip(readline(io)))
                         for k in 1:num_alphas])
                     alpha_idx += num_alphas
@@ -405,11 +462,13 @@ function MOI.read_from_file(model::Model, filename::String)
                                 error("Failed to parse parametric cone $powcone_type information.")
                             end
                             @assert cone_dim == 3
-                            powcone_alpha = powcone_alphas[powcone_idx]
-                            @assert length(powcone_alpha) == 2
-                            first_power = first(powcone_alpha)/sum(powcone_alpha)
-                            con_set = (powcone_type == "POW") ? MOI.PowerCone(first_power) :
-                                MOI.DualPowerCone(first_power)
+                            alpha = ((powcone_type == "POW") ? powcone_alphas :
+                                dpowcone_alphas)[powcone_idx]
+                            @assert length(alpha) == 2
+                            first_power = first(alpha)/sum(alpha)
+                            con_set = (powcone_type == "POW") ?
+                                MOI.PowerCone{Float64}(first_power) :
+                                MOI.DualPowerCone{Float64}(first_power)
                         elseif cone_str == "L=" # Zero cones.
                             con_set = MOI.Zeros(cone_dim)
                         elseif cone_str == "L-" # Nonpositive cones.
@@ -622,11 +681,13 @@ function MOI.read_from_file(model::Model, filename::String)
                     error("Failed to parse parametric cone $powcone_type information.")
                 end
                 @assert cone_dim == 3
-                powcone_alpha = powcone_alphas[powcone_idx]
-                @assert length(powcone_alpha) == 2
-                first_power = first(powcone_alpha)/sum(powcone_alpha)
-                con_set = (powcone_type == "POW") ? MOI.PowerCone(first_power) :
-                    MOI.DualPowerCone(first_power)
+                alpha = ((powcone_type == "POW") ? powcone_alphas :
+                    dpowcone_alphas)[powcone_idx]
+                @assert length(alpha) == 2
+                first_power = first(alpha)/sum(alpha)
+                con_set = (powcone_type == "POW") ?
+                    MOI.PowerCone{Float64}(first_power) :
+                    MOI.DualPowerCone{Float64}(first_power)
             elseif cone_str == "F" # Free cones (redundant but add anyway).
                 con_set = MOI.Reals(cone_dim)
             elseif cone_str == "L=" # Zero cones.
