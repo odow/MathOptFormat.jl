@@ -316,7 +316,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # CBF version number.
-            if startswith(line, "VER")
+            if line == "VER"
                 ver = parse(Int, split(strip(readline(io)))[1])
                 if ver < 1 || ver > 3
                     error("CBF version number $ver is not yet supported by MathOptFormat.")
@@ -325,7 +325,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Power cone parameters.
-            if startswith(line, "POWCONES")
+            if line == "POWCONES"
                 raw_powcone_info = split(strip(readline(io)))
                 @assert length(raw_powcone_info) == 2
                 num_powcone = parse(Int, raw_powcone_info[1])
@@ -342,7 +342,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Dual power cone parameters.
-            if startswith(line, "POW*CONES")
+            if line == "POW*CONES"
                 raw_powcone_info = split(strip(readline(io)))
                 @assert length(raw_powcone_info) == 2
                 num_powcone = parse(Int, raw_powcone_info[1])
@@ -359,7 +359,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Objective sense.
-            if startswith(line, "OBJSENSE")
+            if line == "OBJSENSE"
                 obj_sense = strip(readline(io))
                 if obj_sense == "MIN"
                     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
@@ -372,7 +372,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Non-PSD variable constraints.
-            if startswith(line, "VAR")
+            if line == "VAR"
                 raw_var_info = split(strip(readline(io)))
                 @assert length(raw_var_info) == 2
                 num_var = parse(Int, raw_var_info[1])
@@ -434,7 +434,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Integrality constraints.
-            if startswith(line, "INT")
+            if line == "INT"
                 for k in 1:parse(Int, strip(readline(io)))
                     var_idx = parse(Int, strip(readline(io))) + 1 # CBF indices start at 0.
                     MOI.add_constraint(model,
@@ -444,7 +444,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # PSD variable constraints.
-            if startswith(line, "PSDVAR")
+            if line == "PSDVAR"
                 for k in 1:parse(Int, strip(readline(io)))
                     side_dim = parse(Int, strip(readline(io)))
                     cone_dim = div(side_dim * (side_dim + 1), 2)
@@ -457,7 +457,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # Objective function terms.
-            if startswith(line, "OBJFCOORD")
+            if line == "OBJFCOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 4
@@ -473,7 +473,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "OBJACOORD")
+            if line == "OBJACOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 2
@@ -485,13 +485,13 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "OBJBCOORD")
+            if line == "OBJBCOORD"
                 obj_constant += parse(Float64, strip(readline(io)))
                 continue
             end
 
             # Non-PSD constraints.
-            if startswith(line, "CON")
+            if line == "CON"
                 raw_con_info = split(strip(readline(io)))
                 @assert length(raw_con_info) == 2
                 num_rows = parse(Int, raw_con_info[1])
@@ -512,7 +512,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "FCOORD")
+            if line == "FCOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 5
@@ -528,7 +528,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "ACOORD")
+            if line == "ACOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 3
@@ -541,7 +541,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "BCOORD")
+            if line == "BCOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 2
@@ -552,7 +552,7 @@ function MOI.read_from_file(model::Model, filename::String)
             end
 
             # PSD constraints.
-            if startswith(line, "PSDCON")
+            if line == "PSDCON"
                 idx = 0
                 for k in 1:parse(Int, strip(readline(io)))
                     side_dim = parse(Int, strip(readline(io)))
@@ -566,7 +566,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "HCOORD")
+            if line == "HCOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 5
@@ -580,7 +580,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 continue
             end
 
-            if startswith(line, "DCOORD")
+            if line == "DCOORD"
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 4
