@@ -84,15 +84,9 @@ end
             joinpath(MODELS_DIR, "incompatible_version.cbf"))
     end
 
-    @testset "$filename" for filename in ["power_dimension_A.cbf",
-        "power_dimension_B.cbf"]
-        model = CBF.Model()
-        @test_throws Exception MOI.read_from_file(model,
-            joinpath(MODELS_DIR, filename))
-    end
-
     @testset "$filename" for filename in ["bad_cone_string_A.cbf",
-        "bad_cone_string_B.cbf", "bad_cone_string_C.cbf"]
+        "bad_cone_string_B.cbf", "bad_cone_string_C.cbf",
+        "bad_cone_string_D.cbf"]
         model = CBF.Model()
         @test_throws Exception MOI.read_from_file(model,
             joinpath(MODELS_DIR, filename))
@@ -105,9 +99,9 @@ end
             joinpath(MODELS_DIR, filename))
     end
 
-    @testset "$filename" for filename in ["corrupted_line_A.cbf",
-        "corrupted_line_B.cbf", "corrupted_line_C.cbf", "corrupted_line_D.cbf",
-        "corrupted_line_E.cbf"]
+    @testset "$filename" for filename in ["corrupt_line_A.cbf",
+        "corrupt_line_B.cbf", "corrupt_line_C.cbf", "corrupt_line_D.cbf",
+        "corrupt_line_E.cbf"]
         model = CBF.Model()
         @test_throws Exception MOI.read_from_file(model,
             joinpath(MODELS_DIR, filename))
