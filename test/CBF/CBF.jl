@@ -84,21 +84,30 @@ end
             joinpath(MODELS_DIR, "incompatible_version.cbf"))
     end
 
-    @testset "Bad objective sense" begin
+    @testset "$filename" for filename in ["power_dimension_A.cbf",
+        "power_dimension_B.cbf"]
         model = CBF.Model()
         @test_throws Exception MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "bad_obj_sense.cbf"))
+            joinpath(MODELS_DIR, filename))
     end
 
-    # TODO pow and pow* with >2 alphas
+    @testset "$filename" for filename in ["bad_cone_string_A.cbf",
+        "bad_cone_string_B.cbf", "bad_cone_string_C.cbf"]
+        model = CBF.Model()
+        @test_throws Exception MOI.read_from_file(model,
+            joinpath(MODELS_DIR, filename))
+    end
 
-    # TODO bad parametric cone definition var and con
+    @testset "$filename" for filename in ["bad_power_dim_A.cbf",
+        "bad_power_dim_B.cbf"]
+        model = CBF.Model()
+        @test_throws Exception MOI.read_from_file(model,
+            joinpath(MODELS_DIR, filename))
+    end
 
-    # TODO bad cone string var and con
-
-    corrupted_line_models = ["corrupted_line_A.cbf", "corrupted_line_B.cbf",
-        "corrupted_line_C.cbf", "corrupted_line_D.cbf"]
-    @testset "$filename" for filename in corrupted_line_models
+    @testset "$filename" for filename in ["corrupted_line_A.cbf",
+        "corrupted_line_B.cbf", "corrupted_line_C.cbf", "corrupted_line_D.cbf",
+        "corrupted_line_E.cbf"]
         model = CBF.Model()
         @test_throws Exception MOI.read_from_file(model,
             joinpath(MODELS_DIR, filename))
