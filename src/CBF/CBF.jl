@@ -58,6 +58,8 @@ function MOI.write_to_file(model::Model, filename::String)
         end
         println(io)
 
+        # TODO power cone parameter table.
+
         # Variables.
         num_var = MOI.get(model, MOI.NumberOfVariables())
         println(io, "VAR")
@@ -294,6 +296,8 @@ function MOI.read_from_file(model::Model, filename::String)
     psd_vars = Vector{MOI.VariableIndex}[]
     obj_terms = MOI.ScalarAffineTerm{Float64}[]
     obj_constant = 0.0
+    powcone_alphas = Vector{Float64}[]
+    dpowcone_alphas = Vector{Float64}[]
     con_cones = Tuple{String, Int}[]
     row_terms = Vector{MOI.ScalarAffineTerm{Float64}}[]
     row_constants = Float64[]
@@ -317,6 +321,40 @@ function MOI.read_from_file(model::Model, filename::String)
                 if ver < 1 || ver > 3
                     error("CBF version number $ver is not yet supported by MathOptFormat.")
                 end
+                continue
+            end
+
+            # Power cone parameters.
+            if startswith(line, "POWCONES")
+                raw_powcone_info = split(strip(readline(io)))
+                @assert length(raw_powcone_info) == 2
+                num_powcone = parse(Int, raw_powcone_info[1])
+                num_lines = parse(Int, raw_powcone_info[2])
+                alpha_idx = 0
+                for j in 1:num_powcone
+                    num_alphas = parse(Int, strip(readline(io)))
+                    push!(powcone_alphas, [parse(Float64, strip(readline(io)))
+                        for k in 1:num_alphas])
+                    alpha_idx += num_alphas
+                end
+                @assert num_lines == alpha_idx
+                continue
+            end
+
+            # Dual power cone parameters.
+            if startswith(line, "POW*CONES")
+                raw_powcone_info = split(strip(readline(io)))
+                @assert length(raw_powcone_info) == 2
+                num_powcone = parse(Int, raw_powcone_info[1])
+                num_lines = parse(Int, raw_powcone_info[2])
+                alpha_idx = 0
+                for j in 1:num_powcone
+                    num_alphas = parse(Int, strip(readline(io)))
+                    push!(dpowcone_alphas, [parse(Float64, strip(readline(io)))
+                        for k in 1:num_alphas])
+                    alpha_idx += num_alphas
+                end
+                @assert num_lines == alpha_idx
                 continue
             end
 
@@ -359,8 +397,19 @@ function MOI.read_from_file(model::Model, filename::String)
                     else
                         con_func = MOI.VectorOfVariables(scalar_vars[
                             (var_idx + 1):(var_idx + cone_dim)])
-                        if cone_str in ("POWER", "POWER*") # Power cones.
-                            error("Power cones are not yet supported.")
+                        if startswith(cone_str, "@") # Power cones.
+                            raw_powcone_info = split(cone_str[2:end], ":")
+                            powcone_idx = parse(Int, raw_powcone_info[1]) + 1
+                            powcone_type = raw_powcone_info[2]
+                            if !in(powcone_type, ("POW", "POW*"))
+                                error("Failed to parse parametric cone $powcone_type information.")
+                            end
+                            @assert cone_dim == 3
+                            powcone_alpha = powcone_alphas[powcone_idx]
+                            @assert length(powcone_alpha) == 2
+                            first_power = first(powcone_alpha)/sum(powcone_alpha)
+                            con_set = (powcone_type == "POW") ? MOI.PowerCone(first_power) :
+                                MOI.DualPowerCone(first_power)
                         elseif cone_str == "L=" # Zero cones.
                             con_set = MOI.Zeros(cone_dim)
                         elseif cone_str == "L-" # Nonpositive cones.
@@ -542,6 +591,8 @@ function MOI.read_from_file(model::Model, filename::String)
                 end
                 continue
             end
+
+            error("Failed to parse CBF file due to corrupted line: $line")
         end
     end
 
@@ -563,8 +614,19 @@ function MOI.read_from_file(model::Model, filename::String)
             con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm{Float64}(
                 l, t) for l in 1:cone_dim for t in row_terms[row_idx + l]],
                 row_constants[(row_idx + 1):(row_idx + cone_dim)])
-            if cone_str in ("POWER", "POWER*") # Power cones.
-                error("Power cones are not yet supported.")
+            if startswith(cone_str, "@") # Power cones.
+                raw_powcone_info = split(cone_str[2:end], ":")
+                powcone_idx = parse(Int, raw_powcone_info[1]) + 1
+                powcone_type = raw_powcone_info[2]
+                if !in(powcone_type, ("POW", "POW*"))
+                    error("Failed to parse parametric cone $powcone_type information.")
+                end
+                @assert cone_dim == 3
+                powcone_alpha = powcone_alphas[powcone_idx]
+                @assert length(powcone_alpha) == 2
+                first_power = first(powcone_alpha)/sum(powcone_alpha)
+                con_set = (powcone_type == "POW") ? MOI.PowerCone(first_power) :
+                    MOI.DualPowerCone(first_power)
             elseif cone_str == "F" # Free cones (redundant but add anyway).
                 con_set = MOI.Reals(cone_dim)
             elseif cone_str == "L=" # Zero cones.

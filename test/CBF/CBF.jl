@@ -57,6 +57,14 @@ end
         joinpath(MODELS_DIR, "incompatible_version.cbf"))
 end
 
+@testset "Corrupted line error" begin
+    model = CBF.Model()
+    @test_throws Exception MOI.read_from_file(model,
+        joinpath(MODELS_DIR, "corrupted_line.cbf"))
+end
+
+# TODO refactor read example code below
+
 @testset "Read example A" begin
     model_string = "
         variables: U, V, W, X, Y, Z, x, y, z
@@ -117,6 +125,27 @@ end
 
     MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
 end
+
+@testset "Read example D" begin
+    model_string = "
+        variables: u, v, w, x, y, z
+        maxobjective: w + z
+        c1: [u, v, w] in PowerCone(0.5)
+        c2: [x, y, z] in DualPowerCone(0.5)
+        c3: [1, u, u + v] in PowerCone(0.75)
+        c4: [1, y, x + y] in DualPowerCone(0.75)
+    "
+    model1 = CBF.Model()
+    MOIU.loadfromstring!(model1, model_string)
+    (variable_names, constraint_names) = set_names(model1)
+
+    model2 = CBF.Model()
+    MOI.read_from_file(model2, joinpath(MODELS_DIR, "example_D.cbf"))
+    set_names(model2)
+
+    MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
+end
+
 
 # TODO quadratic objective not supported test
 
