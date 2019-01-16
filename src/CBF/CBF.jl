@@ -46,33 +46,23 @@ function MOI.write_to_file(model::Model, filename::String)
         powcone_cons = vcat(model_cons(MOI.VectorOfVariables,
             MOI.PowerCone{Float64}), model_cons(
             MOI.VectorAffineFunction{Float64}, MOI.PowerCone{Float64}))
-        if !isempty(powcone_cons)
-            println(io, "POWCONES")
-            num_powcones = length(powcone_cons)
-            println(io, num_powcones, " ", 2 * num_powcones)
-            for powcone in powcone_cons
-                println(io, 2)
-                powcone_param = con_set(powcone).exponent
-                println(io, powcone_param)
-                println(io, 1.0 - powcone_param)
-            end
-            println(io)
-        end
-
         dpowcone_cons = vcat(model_cons(MOI.VectorOfVariables,
             MOI.DualPowerCone{Float64}), model_cons(
             MOI.VectorAffineFunction{Float64}, MOI.DualPowerCone{Float64}))
-        if !isempty(dpowcone_cons)
-            println(io, "POW*CONES")
-            num_powcones = length(dpowcone_cons)
-            println(io, num_powcones, " ", 2 * num_powcones)
-            for powcone in dpowcone_cons
-                println(io, 2)
-                powcone_param = con_set(powcone).exponent
-                println(io, powcone_param)
-                println(io, 1.0 - powcone_param)
+        for (cons, powcone_str) in
+            ((powcone_cons, "POWCONES"), (dpowcone_cons, "POW*CONES"))
+            if !isempty(cons)
+                println(io, powcone_str)
+                num_powcones = length(cons)
+                println(io, num_powcones, " ", 2 * num_powcones)
+                for powcone in cons
+                    println(io, 2)
+                    powcone_param = con_set(powcone).exponent
+                    println(io, powcone_param)
+                    println(io, 1.0 - powcone_param)
+                end
+                println(io)
             end
-            println(io)
         end
 
         # Objective sense.
@@ -84,8 +74,6 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, "MIN") # Includes the case of feasibility sense.
         end
         println(io)
-
-        # TODO power cone parameter table.
 
         # Variables.
         num_var = MOI.get(model, MOI.NumberOfVariables())
@@ -100,7 +88,7 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, "INT")
             println(io, length(integer_cons))
             for con_idx in integer_cons
-                println(io, con_function(con_idx).variable.value - 1) # CBF indices start at 0.
+                println(io, con_function(con_idx).variable.value - 1)
             end
             println(io)
         end
@@ -108,17 +96,17 @@ function MOI.write_to_file(model::Model, filename::String)
         # Objective function terms.
         obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
         obj_function = MOI.get(model, MOI.ObjectiveFunction{obj_type}())
-        if obj_type == MOI.SingleVariable # Objective is a single variable.
+        if obj_type == MOI.SingleVariable
             println(io, "OBJACOORD")
             println(io, 1)
-            println(io, obj_function.variable.value - 1, " ", 1.0) # CBF indices start at 0.
+            println(io, obj_function.variable.value - 1, " ", 1.0)
             println(io)
-        elseif obj_type == MOI.ScalarAffineFunction{Float64} # Objective is affine.
+        elseif obj_type == MOI.ScalarAffineFunction{Float64}
             if !isempty(obj_function.terms)
                 println(io, "OBJACOORD")
                 println(io, length(obj_function.terms))
                 for t in obj_function.terms
-                    println(io, t.variable_index.value - 1, " ", t.coefficient) # CBF indices start at 0.
+                    println(io, t.variable_index.value - 1, " ", t.coefficient)
                 end
                 println(io)
             end
@@ -128,7 +116,7 @@ function MOI.write_to_file(model::Model, filename::String)
                 println(io)
             end
         else
-            error("Objective function type $obj_type is not recognized or supported.")
+            error("Objective function type $obj_type is not supported.")
         end
 
         # TODO power cone (parametrized) constraints.
@@ -155,7 +143,8 @@ function MOI.write_to_file(model::Model, filename::String)
             )
             for con_idx in model_cons(MOI.VectorOfVariables, set_type)
                 vars = con_function(con_idx).variables
-                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone) # Reverse order.
+                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone)
+                    # Reverse order of indices.
                     for vj in reverse(vars)
                         num_rows += 1
                         push!(acoord, (num_rows, vj.value, 1.0))
@@ -176,10 +165,12 @@ function MOI.write_to_file(model::Model, filename::String)
                 push!(con_cones, (cone_str, MOI.dimension(con_set(con_idx))))
             end
 
-            for con_idx in model_cons(MOI.VectorAffineFunction{Float64}, set_type)
+            for con_idx in model_cons(MOI.VectorAffineFunction{Float64},
+                set_type)
                 con_func = con_function(con_idx)
                 con_dim = MOI.dimension(con_set(con_idx))
-                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone) # Reverse order.
+                if set_type in (MOI.ExponentialCone, MOI.DualExponentialCone)
+                    # Reverse order of indices.
                     @assert con_dim == 3
                     for t in con_func.terms
                         push!(acoord, (num_rows + 4 - t.output_index,
@@ -225,7 +216,7 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, "ACOORD")
             println(io, length(acoord))
             for (row, var, coef) in acoord
-                println(io, row - 1, " ", var - 1, " ", coef) # CBF indices start at 0.
+                println(io, row - 1, " ", var - 1, " ", coef)
             end
             println(io)
         end
@@ -234,7 +225,7 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, "BCOORD")
             println(io, length(bcoord))
             for (row, constant) in bcoord
-                println(io, row - 1, " ", constant) # CBF indices start at 0.
+                println(io, row - 1, " ", constant)
             end
             println(io)
         end
@@ -295,7 +286,7 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, length(hcoord))
             for (psd_idx, var, i, j, coef) in hcoord
                 println(io, psd_idx - 1, " ", var - 1, " ",
-                    i - 1, " ", j - 1, " ", coef) # CBF indices start at 0.
+                    i - 1, " ", j - 1, " ", coef)
             end
             println(io)
         end
@@ -305,7 +296,7 @@ function MOI.write_to_file(model::Model, filename::String)
             println(io, length(dcoord))
             for (psd_idx, i, j, constant) in dcoord
                 println(io, psd_idx - 1, " ", i - 1, " ",
-                    j - 1, " ", constant) # CBF indices start at 0.
+                    j - 1, " ", constant)
             end
             println(io)
         end
@@ -320,15 +311,54 @@ end
 #
 # The CBF file format (version 3) is described at
 # http://cblib.zib.de/doc/format3.pdf.
+# Note CBF indices start at 0.
 #
 # ==============================================================================
 
-# Convert a pair of row and column indices of a symmetric matrix into a vector index for the row-wise lower triangle
+# Convert a pair of row and column indices of a symmetric matrix into a vector
+# index for the row-wise lower triangle
 function mat_to_vec_idx(i::Int, j::Int)
     if i < j
         return div((j - 1) * j, 2) + i
     else
         return div((i - 1) * i, 2) + j
+    end
+end
+
+function cbf_to_moi_cone(cone_str::AbstractString, cone_dim::Int)
+    if cone_str == "F" # Free cones (redundant but add anyway).
+        return MOI.Reals(cone_dim)
+    elseif cone_str == "L=" # Zero cones.
+        return MOI.Zeros(cone_dim)
+    elseif cone_str == "L-" # Nonpositive cones.
+        return MOI.Nonpositives(cone_dim)
+    elseif cone_str == "L+" # Nonnegative cones.
+        return MOI.Nonnegatives(cone_dim)
+    elseif cone_str == "Q" # Second-order cones.
+        @assert cone_dim >= 2
+        return MOI.SecondOrderCone(cone_dim)
+    elseif cone_str == "QR" # Rotated second-order cones.
+        @assert cone_dim >= 3
+        return MOI.RotatedSecondOrderCone(cone_dim)
+    else
+        error("CBF cone name $cone_str is not recognized or supported.")
+    end
+end
+
+function powcone_to_moi_cone(cone_str::AbstractString,
+    powcone_alphas::Vector{Vector{Float64}},
+    dpowcone_alphas::Vector{Vector{Float64}})
+    raw_powcone_info = split(cone_str[2:end], ":")
+    powcone_idx = parse(Int, raw_powcone_info[1]) + 1
+    powcone_type = raw_powcone_info[2]
+    if powcone_type == "POW"
+        alpha = powcone_alphas[powcone_idx]
+        return MOI.PowerCone{Float64}(first(alpha)/sum(alpha))
+    elseif powcone_type == "POW*"
+        alpha = dpowcone_alphas[powcone_idx]
+        return MOI.DualPowerCone{Float64}(first(alpha)/sum(alpha))
+    else
+        error("Failed to parse parametric cone $powcone_type information.")
     end
 end
 
@@ -364,13 +394,14 @@ function MOI.read_from_file(model::Model, filename::String)
             if line == "VER"
                 ver = parse(Int, split(strip(readline(io)))[1])
                 if ver < 1 || ver > 3
-                    error("CBF version number $ver is not yet supported by MathOptFormat.")
+                    error("CBF version number $ver is not yet supported.")
                 end
                 continue
             end
 
             # Power cone parameters.
-            if line == "POWCONES"
+            if line == "POWCONES" || line == "POW*CONES"
+                alpha = (line == "POWCONES") ? powcone_alphas : dpowcone_alphas
                 raw_powcone_info = split(strip(readline(io)))
                 @assert length(raw_powcone_info) == 2
                 num_powcone = parse(Int, raw_powcone_info[1])
@@ -381,27 +412,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     if num_alphas != 2
                         error("Only 3-dimensional power cones are supported.")
                     end
-                    push!(powcone_alphas, [parse(Float64, strip(readline(io)))
-                        for k in 1:num_alphas])
-                    alpha_idx += num_alphas
-                end
-                @assert num_lines == alpha_idx
-                continue
-            end
-
-            # Dual power cone parameters.
-            if line == "POW*CONES"
-                raw_powcone_info = split(strip(readline(io)))
-                @assert length(raw_powcone_info) == 2
-                num_powcone = parse(Int, raw_powcone_info[1])
-                num_lines = parse(Int, raw_powcone_info[2])
-                alpha_idx = 0
-                for j in 1:num_powcone
-                    num_alphas = parse(Int, strip(readline(io)))
-                    if num_alphas != 2
-                        error("Only 3-dimensional dual power cones are supported.")
-                    end
-                    push!(dpowcone_alphas, [parse(Float64, strip(readline(io)))
+                    push!(alpha, [parse(Float64, strip(readline(io)))
                         for k in 1:num_alphas])
                     alpha_idx += num_alphas
                 end
@@ -417,7 +428,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 elseif obj_sense == "MAX"
                     MOI.set(model, MOI.ObjectiveSense(), MOI.MAX_SENSE)
                 else
-                    error("Objective sense $obj_sense not recognized or supported.")
+                    error("Objective sense $obj_sense is not supported.")
                 end
                 continue
             end
@@ -440,6 +451,7 @@ function MOI.read_from_file(model::Model, filename::String)
                         continue
                     end
                     if cone_str in ("EXP", "EXP*") # Exponential cones.
+                        # Reverse order of indices.
                         @assert cone_dim == 3
                         con_func = MOI.VectorOfVariables(scalar_vars[
                             [var_idx + 3, var_idx + 2, var_idx + 1]])
@@ -448,35 +460,12 @@ function MOI.read_from_file(model::Model, filename::String)
                     else
                         con_func = MOI.VectorOfVariables(scalar_vars[
                             (var_idx + 1):(var_idx + cone_dim)])
-                        if startswith(cone_str, "@") # Power cones.
-                            raw_powcone_info = split(cone_str[2:end], ":")
-                            powcone_idx = parse(Int, raw_powcone_info[1]) + 1
-                            powcone_type = raw_powcone_info[2]
-                            if !in(powcone_type, ("POW", "POW*"))
-                                error("Failed to parse parametric cone $powcone_type information.")
-                            end
+                        if startswith(cone_str, "@") # Power cones (parametric).
                             @assert cone_dim == 3
-                            alpha = ((powcone_type == "POW") ? powcone_alphas :
-                                dpowcone_alphas)[powcone_idx]
-                            @assert length(alpha) == 2
-                            first_power = first(alpha)/sum(alpha)
-                            con_set = (powcone_type == "POW") ?
-                                MOI.PowerCone{Float64}(first_power) :
-                                MOI.DualPowerCone{Float64}(first_power)
-                        elseif cone_str == "L=" # Zero cones.
-                            con_set = MOI.Zeros(cone_dim)
-                        elseif cone_str == "L-" # Nonpositive cones.
-                            con_set = MOI.Nonpositives(cone_dim)
-                        elseif cone_str == "L+" # Nonnegative cones.
-                            con_set = MOI.Nonnegatives(cone_dim)
-                        elseif cone_str == "Q" # Second-order cones.
-                            @assert cone_dim >= 2
-                            con_set = MOI.SecondOrderCone(cone_dim)
-                        elseif cone_str == "QR" # Rotated second-order cones.
-                            @assert cone_dim >= 3
-                            con_set = MOI.RotatedSecondOrderCone(cone_dim)
+                            con_set = powcone_to_moi_cone(cone_str,
+                                powcone_alphas, dpowcone_alphas)
                         else
-                            error("CBF cone name $cone_str is not recognized or supported.")
+                            con_set = cbf_to_moi_cone(cone_str, cone_dim)
                         end
                     end
                     MOI.add_constraint(model, con_func, con_set)
@@ -489,9 +478,9 @@ function MOI.read_from_file(model::Model, filename::String)
             # Integrality constraints.
             if line == "INT"
                 for k in 1:parse(Int, strip(readline(io)))
-                    var_idx = parse(Int, strip(readline(io))) + 1 # CBF indices start at 0.
-                    MOI.add_constraint(model,
-                        MOI.SingleVariable(scalar_vars[var_idx]), MOI.Integer())
+                    var_idx = parse(Int, strip(readline(io))) + 1
+                    MOI.add_constraint(model, MOI.SingleVariable(
+                        scalar_vars[var_idx]), MOI.Integer())
                 end
                 continue
             end
@@ -515,7 +504,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 4
                     (psd_var_idx, i, j) = (parse(Int, raw_coord[i]) + 1
-                        for i in 1:3) # CBF indices start at 0.
+                        for i in 1:3)
                     coef = parse(Float64, raw_coord[end])
                     if i != j
                         coef += coef # scale off-diagonals
@@ -530,7 +519,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 2
-                    var_idx = parse(Int, raw_coord[1]) + 1 # CBF indices start at 0.
+                    var_idx = parse(Int, raw_coord[1]) + 1
                     coef = parse(Float64, raw_coord[end])
                     push!(obj_terms, MOI.ScalarAffineTerm{Float64}(coef,
                         scalar_vars[var_idx]))
@@ -570,7 +559,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 5
                     (row_idx, psd_var_idx, i, j) = (parse(Int, raw_coord[i]) + 1
-                        for i in 1:4) # CBF indices start at 0.
+                        for i in 1:4)
                     coef = parse(Float64, raw_coord[end])
                     if i != j
                         coef += coef # scale off-diagonals
@@ -586,7 +575,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 3
                     (row_idx, var_idx) = (parse(Int, raw_coord[i]) + 1
-                        for i in 1:2) # CBF indices start at 0.
+                        for i in 1:2)
                     coef = parse(Float64, raw_coord[end])
                     push!(row_terms[row_idx], MOI.ScalarAffineTerm{Float64}(
                         coef, scalar_vars[var_idx]))
@@ -598,7 +587,7 @@ function MOI.read_from_file(model::Model, filename::String)
                 for k in 1:parse(Int, strip(readline(io)))
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 2
-                    row_idx = parse(Int, raw_coord[1]) + 1 # CBF indices start at 0.
+                    row_idx = parse(Int, raw_coord[1]) + 1
                     row_constants[row_idx] = parse(Float64, raw_coord[end])
                 end
                 continue
@@ -624,7 +613,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 5
                     (psd_idx, var_idx, i, j) = (parse(Int, raw_coord[i]) + 1
-                        for i in 1:4) # CBF indices start at 0.
+                        for i in 1:4)
                     coef = parse(Float64, raw_coord[end])
                     row_idx = psd_row_starts[psd_idx] + mat_to_vec_idx(i, j)
                     push!(psd_row_terms[row_idx], MOI.ScalarAffineTerm{Float64}(
@@ -638,7 +627,7 @@ function MOI.read_from_file(model::Model, filename::String)
                     raw_coord = split(strip(readline(io)))
                     @assert length(raw_coord) == 4
                     (psd_idx, i, j) = (parse(Int, raw_coord[i]) + 1
-                        for i in 1:3) # CBF indices start at 0.
+                        for i in 1:3)
                     row_idx = psd_row_starts[psd_idx] + mat_to_vec_idx(i, j)
                     psd_row_constants[row_idx] += parse(Float64, raw_coord[end])
                 end
@@ -657,6 +646,7 @@ function MOI.read_from_file(model::Model, filename::String)
     row_idx = 0
     for (cone_str, cone_dim) in con_cones
         if cone_str in ("EXP", "EXP*") # Exponential cones.
+            # Reverse order of indices.
             @assert cone_dim == 3
             con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm{Float64}(
                 4 - l, t) for l in 1:cone_dim for t in row_terms[row_idx + l]],
@@ -667,37 +657,12 @@ function MOI.read_from_file(model::Model, filename::String)
             con_func = MOI.VectorAffineFunction([MOI.VectorAffineTerm{Float64}(
                 l, t) for l in 1:cone_dim for t in row_terms[row_idx + l]],
                 row_constants[(row_idx + 1):(row_idx + cone_dim)])
-            if startswith(cone_str, "@") # Power cones.
-                raw_powcone_info = split(cone_str[2:end], ":")
-                powcone_idx = parse(Int, raw_powcone_info[1]) + 1
-                powcone_type = raw_powcone_info[2]
-                if !in(powcone_type, ("POW", "POW*"))
-                    error("Failed to parse parametric cone $powcone_type information.")
-                end
+            if startswith(cone_str, "@") # Power cones (parametric).
                 @assert cone_dim == 3
-                alpha = ((powcone_type == "POW") ? powcone_alphas :
-                    dpowcone_alphas)[powcone_idx]
-                @assert length(alpha) == 2
-                first_power = first(alpha)/sum(alpha)
-                con_set = (powcone_type == "POW") ?
-                    MOI.PowerCone{Float64}(first_power) :
-                    MOI.DualPowerCone{Float64}(first_power)
-            elseif cone_str == "F" # Free cones (redundant but add anyway).
-                con_set = MOI.Reals(cone_dim)
-            elseif cone_str == "L=" # Zero cones.
-                con_set = MOI.Zeros(cone_dim)
-            elseif cone_str == "L-" # Nonpositive cones.
-                con_set = MOI.Nonpositives(cone_dim)
-            elseif cone_str == "L+" # Nonnegative cones.
-                con_set = MOI.Nonnegatives(cone_dim)
-            elseif cone_str == "Q" # Second-order cones.
-                @assert cone_dim >= 2
-                con_set = MOI.SecondOrderCone(cone_dim)
-            elseif cone_str == "QR" # Rotated second-order cones.
-                @assert cone_dim >= 3
-                con_set = MOI.RotatedSecondOrderCone(cone_dim)
+                con_set = powcone_to_moi_cone(cone_str, powcone_alphas,
+                    dpowcone_alphas)
             else
-                error("CBF cone name $cone_str is not recognized or supported.")
+                con_set = cbf_to_moi_cone(cone_str, cone_dim)
             end
         end
         MOI.add_constraint(model, con_func, con_set)
