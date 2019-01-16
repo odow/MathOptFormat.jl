@@ -38,12 +38,6 @@ function MOI.write_to_file(model::Model, filename::String)
 
     # Write to file.
     open(filename, "w") do io
-        model_name = MOI.get(model, MOI.Name())
-        if !isempty(model_name)
-            println(io, "# ", model_name) # Name into CBF comment.
-            println(io)
-        end
-
         println(io, "VER") # CBF version number.
         println(io, 3)
         println(io)
