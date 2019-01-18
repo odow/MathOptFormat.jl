@@ -13,6 +13,12 @@ function test_model_equality(model_string, variables, constraints)
     MOIU.test_models_equal(model, model_2, variables, constraints)
 end
 
+@testset "read_into_model" begin
+    file_to_read = joinpath(@__DIR__, "free_integer.mps")
+    @test !MOI.is_empty(MathOptFormat.read_into_model(file_to_read))
+    @test !MOI.is_empty(MathOptFormat.read_into_model(file_to_read * ".gz"))
+end
+
 @testset "Errors" begin
     failing_models_dir = joinpath(@__DIR__, "failing_models")
 

@@ -70,6 +70,12 @@ end
 
 @test sprint(show, CBF.Model()) == "A Conic Benchmark Format (CBF) model"
 
+@testset "read_into_model" begin
+    file_to_read = joinpath(@__DIR__, "models", "example_C.cbf")
+    @test !MOI.is_empty(MathOptFormat.read_into_model(file_to_read))
+    @test !MOI.is_empty(MathOptFormat.read_into_model(file_to_read * ".gz"))
+end
+
 @testset "Read errors" begin
     @testset "Non-empty model" begin
         model = CBF.Model()
