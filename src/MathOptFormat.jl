@@ -2,43 +2,52 @@ module MathOptFormat
 
 using MathOptInterface
 const MOI = MathOptInterface
-const MOIU = MOI.Utilities
+
 import GZip
 
 include("MOF/MOF.jl")
 include("MPS/MPS.jl")
 include("CBF/CBF.jl")
 
-# TODO delete after https://github.com/JuliaOpt/MathOptInterface.jl/issues/633
-function MOI.read_from_file(model::MOI.ModelLike, filename::String)
-    open(filename, "r") do io
-        MOI.read_from_file(model, io)
+function gzip_open(f::Function, filename::String, mode::String)
+    if endswith(filename, ".gz")
+        GZip.open(f, filename, mode)
+    else
+        return open(f, filename, mode)
     end
 end
-function MOI.write_to_file(model::MOI.ModelLike, filename::String)
-    open(filename, "w") do io
+
+const MATH_OPT_FORMATS = Union{MOF.Model, MPS.Model, CBF.Model}
+
+function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String)
+    gzip_open(filename, "w") do io
         MOI.write_to_file(model, io)
     end
 end
 
-# Create a MathOptInterface model by reading in a CBF, MOF, or MPS file.
-# The file may be GZipped (with extension `.gz`).
-function read_into_model(filename::String)
-    if endswith(filename, ".gz")
-        io = GZip.open(filename, "r")
-    else
-        io = open(filename, "r")
+function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String)
+    gzip_open(filename, "r") do io
+        MOI.read_from_file(model, io)
     end
-    if endswith(filename, ".mof.json.gz") || endswith(filename, ".mof.json")
-        model = MathOptFormat.MOF.Model()
+end
+
+"""
+    read_from_file(filename::String)
+
+Create a MOI model by reading `filename`. Type of the returned model depends on
+the extension of `filename`.
+"""
+function read_from_file(filename::String)
+    model = if endswith(filename, ".mof.json.gz") || endswith(filename, ".mof.json")
+        MOF.Model()
     elseif endswith(filename, ".cbf.gz") || endswith(filename, ".cbf")
-        model = MathOptFormat.CBF.Model()
+        CBF.Model()
     elseif endswith(filename, ".mps.gz") || endswith(filename, ".mps")
-        model = MathOptFormat.MPS.Model()
+        MPS.Model()
     else
-        error("read_from_file is not implemented for this filetype: $filename")
+        error("File-type of $(filename) not supported by MathOptFormat.jl.")
     end
-    MOI.read_from_file(model, io)
+    MOI.read_from_file(model, filename)
     return model
 end
 
