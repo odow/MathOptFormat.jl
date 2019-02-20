@@ -282,7 +282,12 @@ function write_bounds(io::IO, model::Model)
             set = MOI.get(model, MOI.ConstraintSet(), index)::set_type
             var_name = MOI.get(model, MOI.VariableName(), variable_index)
             write_single_bound(io, set, var_name)
-            pop!(free_variables, variable_index)
+            # We can remove the variable because it has a bound, but first check
+            # that it is still there because some variables might have two
+            # bounds and so might have alredy been removed.
+            if variable_index in free_variables
+                pop!(free_variables, variable_index)
+            end
         end
     end
     for index in MOI.get(model, MOI.ListOfConstraintIndices{
@@ -291,7 +296,9 @@ function write_bounds(io::IO, model::Model)
         variable_index = func.variable::MOI.VariableIndex
         var_name = MOI.get(model, MOI.VariableName(), variable_index)
         println(io, " BV bounds    ", var_name)
-        pop!(free_variables, variable_index)
+        if variable_index in free_variables
+            pop!(free_variables, variable_index)
+        end
     end
     for variable_index in free_variables
         var_name = MOI.get(model, MOI.VariableName(), variable_index)
