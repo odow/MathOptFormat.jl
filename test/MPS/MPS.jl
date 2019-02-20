@@ -242,15 +242,19 @@ end
             c2: x <= 2.0
         """)
         MOI.write_to_file(model, MPS_TEST_FILE)
-        model_2 = MPS.Model()
-        MOI.read_from_file(model_2, MPS_TEST_FILE)
-        for (set_type, constraint_name) in [
-                (MOI.GreaterThan{Float64}, "c1"), (MOI.LessThan{Float64}, "c2")]
-            MOI.set(model_2, MOI.ConstraintName(), MOI.get(model_2,
-                MOI.ListOfConstraintIndices{MOI.SingleVariable, set_type}())[1],
-                constraint_name)
-        end
-        MOIU.test_models_equal(model, model_2, ["x"], ["c1", "c2"])
+        @test read(MPS_TEST_FILE, String) ==
+            "NAME\n" *
+            "ROWS\n" *
+            " N  OBJ\n" *
+            "COLUMNS\n" *
+            "     x        OBJ      1\n" *
+            "RHS\n" *
+            "RANGES\n" *
+            "BOUNDS\n" *
+            " LO bounds    x       1\n" *
+            " UP bounds    x       2\n" *
+            "SOS\n" *
+            "ENDATA\n"
     end
 end
 
