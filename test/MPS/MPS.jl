@@ -243,7 +243,7 @@ end
         """)
         MOI.write_to_file(model, MPS_TEST_FILE)
         @test read(MPS_TEST_FILE, String) ==
-            "NAME\n" *
+            "NAME          \n" *
             "ROWS\n" *
             " N  OBJ\n" *
             "COLUMNS\n" *
