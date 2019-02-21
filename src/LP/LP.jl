@@ -83,60 +83,65 @@ end
 
 write_constraint_prefix(io::IO, set) = nothing
 
-const LINEAR_CONSTRAINTS = (
+function write_constraint(io::IO, model::Model, index; write_name::Bool)
+    func = MOI.get(model, MOI.ConstraintFunction(), index)
+    set = MOI.get(model, MOI.ConstraintSet(), index)
+    if write_name
+        print(io, MOI.get(model, MOI.ConstraintName(), index), ": ")
+    end
+    write_constraint_prefix(io, set)
+    write_function(io, model, func)
+    write_constraint_suffix(io, set)
+end
+
+const SCALAR_SETS = (
     MOI.LessThan{Float64}, MOI.GreaterThan{Float64}, MOI.EqualTo{Float64},
     MOI.Interval{Float64}
 )
 
-function MOI.write_to_file(model::Model, io::IO)
+function write_sense(io::IO, model::Model)
     if MOI.get(model, MOI.ObjectiveSense()) == MOI.MAX_SENSE
-        println(io, "Maximize")
+        println(io, "maximize")
     else
-        println(io, "Minimize")
+        println(io, "minimize")
     end
+    return
+end
 
+function write_objective(io::IO, model::Model)
     print(io, "obj: ")
     obj_func_type = MOI.get(model, MOI.ObjectiveFunctionType())
     obj_func = MOI.get(model, MOI.ObjectiveFunction{obj_func_type}())
     write_function(io, model, obj_func)
     println(io)
+    return
+end
 
-    for S in LINEAR_CONSTRAINTS
+function MOI.write_to_file(model::Model, io::IO)
+    write_sense(io, model)
+    write_objective(io, model)
+    println(io, "subject to")
+    for S in SCALAR_SETS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Float64}, S}())
-            func = MOI.get(model, MOI.ConstraintFunction(), index)
-            set = MOI.get(model, MOI.ConstraintSet(), index)
-            print(io, MOI.get(model, MOI.ConstraintName(), index), " : ")
-            write_constraint_prefix(io, set)
-            write_function(io, model, func)
-            write_constraint_suffix(io, set)
+            write_constraint(io, model, index; write_name = true)
         end
     end
 
     println(io, "Bounds")
-    for set_type in LINEAR_CONSTRAINTS
-        for index in MOI.get(model, MOI.ListOfConstraintIndices{
-                MOI.SingleVariable, set_type}())
-            func = MOI.get(model, MOI.ConstraintFunction(), index)
-            set = MOI.get(model, MOI.ConstraintSet(), index)
-            write_constraint_prefix(io, set)
-            write_function(io, model, func)
-            write_constraint_suffix(io, set)
+    for S in SCALAR_SETS
+        for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, S}())
+            write_constraint(io, model, index; write_name = false)
         end
     end
 
-    integer_variables = MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, MOI.Integer}())
-    if length(integer_variables) > 0
-        println(io, "General")
-        for index in integer_variables
-            println(io, MOI.get(model, MOI.VariableName(), index))
-        end
-    end
-
-    integer_variables = MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, MOI.ZeroOne}())
-    if length(integer_variables) > 0
-        println(io, "Binary")
-        for index in integer_variables
-            println(io, MOI.get(model, MOI.VariableName(), index))
+    for (S, str_S) in [(MOI.Integer, "General"), (MOI.ZeroOne, "Binary")]
+        indices = MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, S}())
+        if length(indices) > 0
+            println(io, str_S)
+            for index in indices
+                write_function(io, model, MOI.get(model, MOI.ConstraintFunction(), index))
+                println(io)
+            end
         end
     end
 
@@ -149,7 +154,7 @@ end
 #
 # ==============================================================================
 
-function MOI.read_from_to_file(model::Model, io::IO)
+function MOI.read_from_file(model::Model, io::IO)
     error("Read from file is not implemented for LP files.")
 end
 
