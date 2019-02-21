@@ -83,7 +83,7 @@ end
 
 write_constraint_prefix(io::IO, set) = nothing
 
-function write_constraint(io::IO, model::Model, index; write_name::Bool)
+function write_constraint(io::IO, model::Model, index; write_name::Bool = true)
     func = MOI.get(model, MOI.ConstraintFunction(), index)
     set = MOI.get(model, MOI.ConstraintSet(), index)
     if write_name
