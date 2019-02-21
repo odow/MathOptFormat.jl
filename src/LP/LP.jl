@@ -73,8 +73,6 @@ function write_constraint_suffix(io::IO, set::MOI.Interval)
     return
 end
 
-write_constraint_suffix(io::IO, set) = nothing
-
 function write_constraint_prefix(io::IO, set::MOI.Interval)
     Base.Grisu.print_shortest(io, set.lower)
     print(io, " <= ")
