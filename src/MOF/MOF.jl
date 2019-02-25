@@ -4,6 +4,8 @@ const VERSION = 0
 
 using DataStructures, JSON, MathOptInterface
 
+import JuMP
+
 # we use an ordered dict to make the JSON printing nicer
 const Object = OrderedDict{String, Any}
 

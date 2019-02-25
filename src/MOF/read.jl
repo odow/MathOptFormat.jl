@@ -1,4 +1,4 @@
-function MOI.read_from_file(model::Model, io::IO)
+function MOI.read_from_file(model::Model, io::IO; convert_to_nlp_block = true)
     if !MOI.is_empty(model)
         error("Cannot read model from file as destination model is not empty.")
     end
@@ -11,8 +11,62 @@ function MOI.read_from_file(model::Model, io::IO)
     name_map = read_variables(model, object)
     read_objectives(model, object, name_map)
     read_constraints(model, object, name_map)
+    if convert_to_nlp_block
+        convert_nlp_to_nlpblock(model)
+    end
     return
 end
+
+function convert_nlp_to_nlpblock(model::Model)
+    has_nonlinear = false
+    jump = JuMP.Model()
+    JuMP.@variable(jump, x[1:MOI.get(model, MOI.NumberOfVariables())])
+    for (F, S) in MOI.get(model, MOI.ListOfConstraints())
+        F != Nonlinear && continue
+        for index in MOI.get(model, MOI.ListOfConstraintIndices{F, S}())
+            func = MOI.get(model, MOI.ConstraintFunction(), index)
+            set = MOI.get(model, MOI.ConstraintSet(), index)
+            expr = replace_variable_index_with_jump_vars(func.expr, x)
+            JuMP.add_NL_constraint(jump, moi_to_jump_expr(expr, set))
+            has_nonlinear = true
+            # Remove this constraint because we'll add it to NLPBLock.
+            MOI.delete(model, index)
+        end
+    end
+    if MOI.get(model, MOI.ObjectiveFunctionType()) == Nonlinear
+        sense = MOI.get(model, MOI.ObjectiveSense())
+        func = MOI.get(model, MOI.ObjectiveFunction{Nonlinear}())
+        expr = replace_variable_index_with_jump_vars(func.expr, x)
+        MOI.set_NL_objective(jump, sense, expr)
+        has_nonlinear = true
+    end
+    if has_nonlinear
+        MOI.set(model, MOI.NLPBlock(), JuMP._create_nlp_block_data(jump))
+    end
+    return
+end
+
+function replace_variable_index_with_jump_vars(
+        expr::Expr, x::Vector{JuMP.VariableRef})
+    for (i, arg) in enumerate(expr.args)
+        expr.args[i] = replace_variable_index_with_jump_vars(arg, x)
+    end
+    return expr
+end
+function replace_variable_index_with_jump_vars(
+        expr::MOI.VariableIndex, x::Vector{JuMP.VariableRef})
+    return x[expr.value]
+end
+replace_variable_index_with_jump_vars(expr, x::Vector{JuMP.VariableRef}) = expr
+
+
+moi_to_jump_expr(f, s::MOI.LessThan) = Expr(:call, :(<=), f.expr, s.upper)
+moi_to_jump_expr(f, s::MOI.GreaterThan) = Expr(:call, :(>=), f.expr, s.lower)
+moi_to_jump_expr(f, s::MOI.EqualTo) = Expr(:call, :(==), f.expr, s.value)
+function moi_to_jump_expr(f, s::MOI.Interval)
+    return Expr(:comparison, s.lower, :(<=), f.expr, :(<=), s.upper)
+end
+moi_to_jump_expr(f, s) = error("$(typeof(f))-in-$(typeof(s)) not supported.")
 
 function read_variables(model::Model, object::Object)
     indices = MOI.add_variables(model, length(object["variables"]))

@@ -292,7 +292,7 @@ function convert_mof_to_expr(node::Object, node_list::Vector{Object},
 end
 
 """
-    convert_mof_to_expr(node::Object, node_list::Vector{Object},
+    convert_expr_to_mof(node::Object, node_list::Vector{Object},
                         name_map::Dict{MOI.VariableIndex, String})
 
 Convert a Julia expression into a MathOptFormat representation. Any intermediate

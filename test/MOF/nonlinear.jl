@@ -119,7 +119,7 @@ end
         MOI.write_to_file(model, TEST_MOF_FILE)
         # Read the model back in.
         model2 = MOF.Model()
-        MOI.read_from_file(model2, TEST_MOF_FILE)
+        MOI.read_from_file(model2, TEST_MOF_FILE; convert_to_nlp_block = false)
         con2 = MOI.get(model2, MOI.ConstraintIndex, "con")
         foo2 = MOI.get(model2, MOI.ConstraintFunction(), con2)
         # Test that we recover the constraint.
