@@ -66,11 +66,7 @@
             "required": ["head", "output_index", "scalar_term"]
         },
         "functions": {
-            "description": "A schema
-            for the functions defined by MathOptFormat.See http:
-                //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1
-                for a list of the functions and their meanings.
-            ",
+            "description": "A schema for the functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
             "oneOf": [{
                 "type": "object",
                 "properties": {
@@ -185,10 +181,7 @@
             }]
         },
         "sets": {
-            "description": "A schema for the sets defined by MathOptFormat.
-            See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1
-                for a list of the sets and their meanings.
-            ",
+            "description": "A schema for the sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
             "oneOf": [{
                 "type": "object",
                 "properties": {
@@ -240,10 +233,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": [
-                            "ZeroOne", "Integer",
-                            "ExponentialCone", "DualExponentialCone"
-                        ]
+                        "enum": ["ZeroOne", "Integer", "ExponentialCone", "DualExponentialCone"]
                     }
                 },
                 "required": ["head"]
@@ -265,11 +255,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": [
-                            "Zeros", "Reals", "Nonpositives", "Nonnegatives",
-                            "SecondOrderCone", "RotatedSecondOrderCone",
-                            "GeometricMeanCone"
-                        ]
+                        "enum": ["Zeros", "Reals", "Nonpositives", "Nonnegatives", "SecondOrderCone", "RotatedSecondOrderCone", "GeometricMeanCone"]
                     },
                     "dimension": {
                         "type": "integer"
@@ -280,12 +266,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": [
-                            "RootDetConeTriangle", "RootDetConeSquare",
-                            "LogDetConeTriangle", "LogDetConeSquare",
-                            "PositiveSemidefiniteConeTriangle",
-                            "PositiveSemidefiniteConeSquare",
-                        ]
+                        "enum": ["RootDetConeTriangle", "RootDetConeSquare", "LogDetConeTriangle", "LogDetConeSquare", "PositiveSemidefiniteConeTriangle", "PositiveSemidefiniteConeSquare"]
                     },
                     "side_dimension": {
                         "type": "integer"
@@ -296,9 +277,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": [
-                            "PowerCone", "DualPowerCone",
-                        ]
+                        "enum": ["PowerCone", "DualPowerCone"]
                     },
                     "exponent": {
                         "type": "number"
@@ -311,9 +290,6 @@
     "title": "The schema for MathOptFormat version 1",
     "type": "object",
     "properties": {
-        "version": {
-            "enum": [0]
-        },
         "author": {
             "description": "The author of the model for citation purposes",
             "type": "string"
@@ -373,5 +349,5 @@
             "uniqueItems": true
         }
     },
-    "required": ["version", "variables", "objectives", "constraints"]
+    "required": ["variables", "objectives", "constraints"]
 }
