@@ -1,0 +1,179 @@
+{
+    "$schema": "https://json-schema.org/schema#",
+    "$id": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json",
+    "definitions": {
+        "functions": {
+            "description": "A schema for the functions defined by MathOptFormat",
+            "oneOf": [{
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "SingleVariable"
+                    },
+                    "variable": {
+                        "type": "string"
+                    }
+                }
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "VectorOfVariables"
+                    },
+                    "variables": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "ScalarAffineFunction"
+                    },
+                    "constant": {
+                        "type": "number"
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "variable_index": {
+                                    "type": "string"
+                                },
+                                "coefficient": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    }
+                }
+            }]
+        },
+        "sets": {
+            "description": "A schema for the sets defined by MathOptFormat",
+            "oneOf": [{
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "LessThan"
+                    },
+                    "upper": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "upper"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "GreaterThan"
+                    },
+                    "lower": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "lower"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "EqualTo"
+                    },
+                    "value": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "value"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "Interval"
+                    },
+                    "lower": {
+                        "type": "number"
+                    },
+                    "upper": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "lower", "upper"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "ZeroOne"
+                    }
+                },
+                "required": ["head"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "Integer"
+                    }
+                },
+                "required": ["head"]
+            }]
+        }
+    },
+    "title": "The schema for MathOptFormat version 1",
+    "type": "object",
+    "properties": {
+        "variables": {
+            "description": "An array of variables in the model",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["name"]
+            },
+            "uniqueItems": true
+        },
+        "objectives": {
+            "description": "An array of objectives in the model",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "sense": {
+                        "enum": ["min", "max"]
+                    },
+                    "function": {
+                        "$ref": "#/definitions/functions"
+                    }
+                },
+                "required": ["sense", "function"]
+            }
+        },
+        "constraints": {
+            "description": "An array of constraints in the model",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "function": {
+                        "$ref": "#/definitions/functions"
+                    },
+                    "set": {
+                        "$ref": "#/definitions/sets"
+                    }
+                },
+                "required": ["name", "function", "set"]
+            },
+            "uniqueItems": true
+        }
+    },
+    "required": ["variables", "objectives", "constraints"]
+}
