@@ -2,6 +2,69 @@
     "$schema": "https://json-schema.org/schema#",
     "$id": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json",
     "definitions": {
+        "ScalarAffineTerm": {
+            "type": "object",
+            "properties": {
+                "head": {
+                    "const": "ScalarAffineTerm"
+                },
+                "variable_index": {
+                    "type": "string"
+                },
+                "coefficient": {
+                    "type": "number"
+                }
+            },
+            "required": ["head", "variable_index", "coefficient"]
+        },
+        "ScalarQuadraticTerm": {
+            "type": "object",
+            "properties": {
+                "head": {
+                    "const": "ScalarQuadraticTerm"
+                },
+                "variable_index_1": {
+                    "type": "string"
+                },
+                "variable_index_2": {
+                    "type": "string"
+                },
+                "coefficient": {
+                    "type": "number"
+                }
+            },
+            "required": ["head", "variable_index_1", "variable_index_2", "coefficient"]
+        },
+        "VectorAffineTerm": {
+            "type": "object",
+            "properties": {
+                "head": {
+                    "const": "VectorAffineTerm"
+                },
+                "output_index": {
+                    "type": "integer"
+                },
+                "scalar_term": {
+                    "$ref": "#/definitions/ScalarAffineTerm"
+                }
+            },
+            "required": ["head", "output_index", "scalar_term"]
+        },
+        "VectorQuadraticTerm": {
+            "type": "object",
+            "properties": {
+                "head": {
+                    "const": "VectorQuadraticTerm"
+                },
+                "output_index": {
+                    "type": "integer"
+                },
+                "scalar_term": {
+                    "$ref": "#/definitions/ScalarQuadraticTerm"
+                }
+            },
+            "required": ["head", "output_index", "scalar_term"]
+        },
         "functions": {
             "description": "A schema for the functions defined by MathOptFormat",
             "oneOf": [{
@@ -13,7 +76,8 @@
                     "variable": {
                         "type": "string"
                     }
-                }
+                },
+                "required": ["head", "variable"]
             }, {
                 "type": "object",
                 "properties": {
@@ -26,7 +90,8 @@
                             "type": "string"
                         }
                     }
-                }
+                },
+                "required": ["head", "variables"]
             }, {
                 "type": "object",
                 "properties": {
@@ -39,18 +104,80 @@
                     "terms": {
                         "type": "array",
                         "items": {
-                            "type": "object",
-                            "properties": {
-                                "variable_index": {
-                                    "type": "string"
-                                },
-                                "coefficient": {
-                                    "type": "number"
-                                }
-                            }
+                            "$ref": "#/definitions/ScalarAffineTerm"
                         }
                     }
-                }
+                },
+                "required": ["head", "constant", "terms"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "VectorAffineFunction"
+                    },
+                    "constant": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/VectorAffineTerm"
+                        }
+                    }
+                },
+                "required": ["head", "constant", "terms"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "ScalarQuadraticFunction"
+                    },
+                    "constant": {
+                        "type": "number"
+                    },
+                    "affine_terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/ScalarAffineTerm"
+                        }
+                    },
+                    "quadratic_terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/ScalarQuadraticTerm"
+                        }
+                    }
+                },
+                "required": ["head", "constant", "affine_terms", "quadratic_terms"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "VectorQuadraticFunction"
+                    },
+                    "constant": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "affine_terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/VectorAffineTerm"
+                        }
+                    },
+                    "quadratc_terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/VectorQuadraticTerm"
+                        }
+                    }
+                },
+                "required": ["head", "constant", "affine_terms", "quadratic_terms"]
             }]
         },
         "sets": {
@@ -92,7 +219,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "const": "Interval"
+                        "enum": ["Interval", "Semiinteger", "Semicontinuous"]
                     },
                     "lower": {
                         "type": "number"
@@ -106,7 +233,7 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "const": "ZeroOne"
+                        "enum": ["ZeroOne", "Integer"]
                     }
                 },
                 "required": ["head"]
@@ -114,16 +241,44 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "const": "Integer"
+                        "enum": ["SOS1", "SOS2"]
+                    },
+                    "weights": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
                     }
                 },
-                "required": ["head"]
+                "required": ["head", "weights"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "enum": ["Zeros", "Reals", "Nonpositives", "Nonnegatives"]
+                    },
+                    "dimension": {
+                        "type": "integer"
+                    }
+                },
+                "required": ["head", "dimension"]
             }]
         }
     },
     "title": "The schema for MathOptFormat version 1",
     "type": "object",
     "properties": {
+        "version": {
+            "enum": [0]
+        },
+        "author": {
+            "description": "The author of the model for citation purposes",
+            "type": "string"
+        },
+        "description": {
+            "description": "A human-readable description of the model",
+            "type": "string"
+        },
         "variables": {
             "description": "An array of variables in the model",
             "type": "array",
@@ -175,5 +330,5 @@
             "uniqueItems": true
         }
     },
-    "required": ["variables", "objectives", "constraints"]
+    "required": ["version", "variables", "objectives", "constraints"]
 }
