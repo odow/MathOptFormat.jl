@@ -65,6 +65,71 @@
             },
             "required": ["head", "output_index", "scalar_term"]
         },
+        "NonlinearTerm": {
+            "description": "A node in an expresion graph representing a nonlinear function.",
+            "oneOf": [{
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "enum": ["+", "-", "*", "/", "^", "log", "log10", "exp", "sqrt"]
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/NonlinearTerm"
+                        }
+                    }
+                },
+                "required": ["head", "args"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "real"
+                    },
+                    "value": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "value"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "variable"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["head", "name"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "complex"
+                    },
+                    "real": {
+                        "type": "number"
+                    },
+                    "imag": {
+                        "type": "number"
+                    }
+                },
+                "required": ["head", "real", "imag"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "node"
+                    },
+                    "index": {
+                        "type": "integer"
+                    }
+                },
+                "required": ["head", "index"]
+            }]
+        },
         "functions": {
             "description": "A schema for the functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
             "oneOf": [{
@@ -115,7 +180,7 @@
                     "head": {
                         "const": "VectorAffineFunction"
                     },
-                    "constant": {
+                    "constants": {
                         "type": "array",
                         "items": {
                             "type": "number"
@@ -128,7 +193,7 @@
                         }
                     }
                 },
-                "required": ["head", "constant", "terms"]
+                "required": ["head", "constants", "terms"]
             }, {
                 "type": "object",
                 "properties": {
@@ -158,7 +223,7 @@
                     "head": {
                         "const": "VectorQuadraticFunction"
                     },
-                    "constant": {
+                    "constants": {
                         "type": "array",
                         "items": {
                             "type": "number"
@@ -177,7 +242,24 @@
                         }
                     }
                 },
-                "required": ["head", "constant", "affine_terms", "quadratic_terms"]
+                "required": ["head", "constants", "affine_terms", "quadratic_terms"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "Nonlinear"
+                    },
+                    "root": {
+                        "$ref": "#/definitions/NonlinearTerm"
+                    },
+                    "node_list": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/NonlinearTerm"
+                        }
+                    }
+                },
+                "required": ["head"]
             }]
         },
         "sets": {
