@@ -177,8 +177,8 @@
                 "required": ["head", "index"]
             }]
         },
-        "functions": {
-            "description": "A schema for the functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
+        "scalar_functions": {
+            "description": "A schema for the scalar-valued functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
             "oneOf": [{
                 "type": "object",
                 "properties": {
@@ -190,20 +190,6 @@
                     }
                 },
                 "required": ["head", "variable"]
-            }, {
-                "type": "object",
-                "properties": {
-                    "head": {
-                        "const": "VectorOfVariables"
-                    },
-                    "variables": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "required": ["head", "variables"]
             }, {
                 "type": "object",
                 "properties": {
@@ -221,26 +207,6 @@
                     }
                 },
                 "required": ["head", "constant", "terms"]
-            }, {
-                "type": "object",
-                "properties": {
-                    "head": {
-                        "const": "VectorAffineFunction"
-                    },
-                    "constants": {
-                        "type": "array",
-                        "items": {
-                            "type": "number"
-                        }
-                    },
-                    "terms": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/definitions/VectorAffineTerm"
-                        }
-                    }
-                },
-                "required": ["head", "constants", "terms"]
             }, {
                 "type": "object",
                 "properties": {
@@ -268,6 +234,61 @@
                 "type": "object",
                 "properties": {
                     "head": {
+                        "const": "Nonlinear"
+                    },
+                    "root": {
+                        "$ref": "#/definitions/NonlinearTerm"
+                    },
+                    "node_list": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/NonlinearTerm"
+                        }
+                    }
+                },
+                "required": ["head", "root", "node_list"]
+            }]
+        },
+        "vector_functions": {
+            "description": "A schema for the vector-valued functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
+            "oneOf": [{
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "VectorOfVariables"
+                    },
+                    "variables": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["head", "variables"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "VectorAffineFunction"
+                    },
+                    "constants": {
+                        "type": "array",
+                        "items": {
+                            "type": "number"
+                        }
+                    },
+                    "terms": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/VectorAffineTerm"
+                        }
+                    }
+                },
+                "required": ["head", "constants", "terms"]
+            }, {
+                "type": "object",
+                "properties": {
+                    "head": {
                         "const": "VectorQuadraticFunction"
                     },
                     "constants": {
@@ -290,27 +311,10 @@
                     }
                 },
                 "required": ["head", "constants", "affine_terms", "quadratic_terms"]
-            }, {
-                "type": "object",
-                "properties": {
-                    "head": {
-                        "const": "Nonlinear"
-                    },
-                    "root": {
-                        "$ref": "#/definitions/NonlinearTerm"
-                    },
-                    "node_list": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/definitions/NonlinearTerm"
-                        }
-                    }
-                },
-                "required": ["head", "root", "node_list"]
             }]
         },
-        "sets": {
-            "description": "A schema for the sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
+        "scalar_sets": {
+            "description": "A schema for the scalar-valued sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
             "oneOf": [{
                 "type": "object",
                 "properties": {
@@ -362,7 +366,19 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": ["ZeroOne", "Integer", "ExponentialCone", "DualExponentialCone"]
+                        "enum": ["ZeroOne", "Integer"]
+                    }
+                },
+                "required": ["head"]
+            }]
+        },
+        "vector_sets": {
+            "description": "A schema for the vector-valued sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
+            "oneOf": [{
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "enum": ["ExponentialCone", "DualExponentialCone"]
                     }
                 },
                 "required": ["head"]
@@ -453,7 +469,7 @@
                         "enum": ["min", "max"]
                     },
                     "function": {
-                        "$ref": "#/definitions/functions"
+                        "$ref": "#/definitions/scalar_functions"
                     }
                 },
                 "required": ["sense", "function"]
@@ -463,19 +479,37 @@
             "description": "An array of constraints in the model",
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
+                "oneOf": [{
+                    "description": "A scalar-valued constraint",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "function": {
+                            "$ref": "#/definitions/scalar_functions"
+                        },
+                        "set": {
+                            "$ref": "#/definitions/scalar_sets"
+                        }
                     },
-                    "function": {
-                        "$ref": "#/definitions/functions"
+                    "required": ["function", "set"]
+                }, {
+                    "description": "A vector-valued constraint",
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "function": {
+                            "$ref": "#/definitions/vector_functions"
+                        },
+                        "set": {
+                            "$ref": "#/definitions/vector_sets"
+                        }
                     },
-                    "set": {
-                        "$ref": "#/definitions/sets"
-                    }
-                },
-                "required": ["function", "set"]
+                    "required": ["function", "set"]
+                }]
             },
             "uniqueItems": true
         }
