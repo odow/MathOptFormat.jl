@@ -68,16 +68,56 @@
         "NonlinearTerm": {
             "description": "A node in an expresion graph representing a nonlinear function.",
             "oneOf": [{
+                "description": "Unary operators",
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": ["+", "-", "*", "/", "^", "log", "log10", "exp", "sqrt"]
+                        "enum": [
+                            "log", "log10", "exp", "sqrt", "floor", "ceil", "abs",
+                            "cos", "sin", "tan", "acos", "asin", "atan",
+                            "cosh", "sinh", "tanh", "acosh", "asinh", "atanh"
+                        ]
                     },
                     "args": {
                         "type": "array",
                         "items": {
                             "$ref": "#/definitions/NonlinearTerm"
-                        }
+                        },
+                        "minItems": 1,
+                        "maxItems": 1
+                    }
+                },
+                "required": ["head", "args"]
+            }, {
+                "description": "Binary operators",
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "enum": ["/", "^"]
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/NonlinearTerm"
+                        },
+                        "minItems": 2,
+                        "maxItems": 2
+                    }
+                },
+                "required": ["head", "args"]
+            }, {
+                "description": "Nnary operators",
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "enum": ["+", "-", "*", "min", "max"]
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/NonlinearTerm"
+                        },
+                        "minItems": 1
                     }
                 },
                 "required": ["head", "args"]
@@ -381,7 +421,7 @@
             "type": "string"
         },
         "variables": {
-            "description": "An array of variables in the model",
+            "description": "An array of variables in the model. Each must have a unique name.",
             "type": "array",
             "items": {
                 "type": "object",
@@ -426,7 +466,7 @@
                         "$ref": "#/definitions/sets"
                     }
                 },
-                "required": ["name", "function", "set"]
+                "required": ["function", "set"]
             },
             "uniqueItems": true
         }
