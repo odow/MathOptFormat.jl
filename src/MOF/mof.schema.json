@@ -42,7 +42,8 @@
                     "const": "VectorAffineTerm"
                 },
                 "output_index": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "scalar_term": {
                     "$ref": "#/definitions/ScalarAffineTerm"
@@ -57,7 +58,8 @@
                     "const": "VectorQuadraticTerm"
                 },
                 "output_index": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "scalar_term": {
                     "$ref": "#/definitions/ScalarQuadraticTerm"
@@ -122,6 +124,7 @@
                 },
                 "required": ["head", "args"]
             }, {
+                "description": "A real-valued numeric constant",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -133,17 +136,7 @@
                 },
                 "required": ["head", "value"]
             }, {
-                "type": "object",
-                "properties": {
-                    "head": {
-                        "const": "variable"
-                    },
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": ["head", "name"]
-            }, {
+                "description": "A complex-valued numeric constant",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -158,13 +151,27 @@
                 },
                 "required": ["head", "real", "imag"]
             }, {
+                "description": "A reference to an optimization variable",
+                "type": "object",
+                "properties": {
+                    "head": {
+                        "const": "variable"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["head", "name"]
+            }, {
+                "description": "A pointer to a (1-indexed) element in the `node_list` field in a nonlinear function",
                 "type": "object",
                 "properties": {
                     "head": {
                         "const": "node"
                     },
                     "index": {
-                        "type": "integer"
+                        "type": "integer",
+                        "minimum": 1
                     }
                 },
                 "required": ["head", "index"]
@@ -299,7 +306,7 @@
                         }
                     }
                 },
-                "required": ["head"]
+                "required": ["head", "root", "node_list"]
             }]
         },
         "sets": {
@@ -380,7 +387,8 @@
                         "enum": ["Zeros", "Reals", "Nonpositives", "Nonnegatives", "SecondOrderCone", "RotatedSecondOrderCone", "GeometricMeanCone"]
                     },
                     "dimension": {
-                        "type": "integer"
+                        "type": "integer",
+                        "minimum": 1
                     }
                 },
                 "required": ["head", "dimension"]
@@ -391,7 +399,8 @@
                         "enum": ["RootDetConeTriangle", "RootDetConeSquare", "LogDetConeTriangle", "LogDetConeSquare", "PositiveSemidefiniteConeTriangle", "PositiveSemidefiniteConeSquare"]
                     },
                     "side_dimension": {
-                        "type": "integer"
+                        "type": "integer",
+                        "minimum": 1
                     }
                 },
                 "required": ["head", "side_dimension"]
