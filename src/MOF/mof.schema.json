@@ -1,6 +1,87 @@
 {
     "$schema": "https://json-schema.org/schema#",
     "$id": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json",
+    "title": "The schema for MathOptFormat",
+    "type": "object",
+    "properties": {
+        "version": {
+            "const": 0
+        },
+        "author": {
+            "description": "The author of the model for citation purposes",
+            "type": "string"
+        },
+        "description": {
+            "description": "A human-readable description of the model",
+            "type": "string"
+        },
+        "required": ["version", "variables", "objectives", "constraints"],
+        "variables": {
+            "description": "An array of variables in the model. Each must have a unique name.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["name"]
+            },
+            "uniqueItems": true
+        },
+        "objectives": {
+            "description": "An array of objectives in the model",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "sense": {
+                        "enum": ["min", "max"]
+                    },
+                    "function": {
+                        "$ref": "#/definitions/scalar_functions"
+                    }
+                },
+                "required": ["sense", "function"]
+            }
+        },
+        "constraints": {
+            "description": "An array of constraints in the model. Scalar-valued functions can only be paired with scalar-sets, and the same applies for vector-valued functions and sets.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": ["function", "set"],
+                "oneOf": [{
+                    "description": "A scalar-valued constraint",
+                    "properties": {
+                        "function": {
+                            "$ref": "#/definitions/scalar_functions"
+                        },
+                        "set": {
+                            "$ref": "#/definitions/scalar_sets"
+                        }
+                    }
+                }, {
+                    "description": "A vector-valued constraint",
+                    "properties": {
+                        "function": {
+                            "$ref": "#/definitions/vector_functions"
+                        },
+                        "set": {
+                            "$ref": "#/definitions/vector_sets"
+                        }
+                    }
+                }]
+            },
+            "uniqueItems": true
+        }
+    },
     "definitions": {
         "ScalarAffineTerm": {
             "type": "object",
@@ -433,86 +514,5 @@
                 "required": ["head", "exponent"]
             }]
         }
-    },
-    "title": "The schema for MathOptFormat version 1",
-    "type": "object",
-    "properties": {
-        "author": {
-            "description": "The author of the model for citation purposes",
-            "type": "string"
-        },
-        "description": {
-            "description": "A human-readable description of the model",
-            "type": "string"
-        },
-        "variables": {
-            "description": "An array of variables in the model. Each must have a unique name.",
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    }
-                },
-                "required": ["name"]
-            },
-            "uniqueItems": true
-        },
-        "objectives": {
-            "description": "An array of objectives in the model",
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "sense": {
-                        "enum": ["min", "max"]
-                    },
-                    "function": {
-                        "$ref": "#/definitions/scalar_functions"
-                    }
-                },
-                "required": ["sense", "function"]
-            }
-        },
-        "constraints": {
-            "description": "An array of constraints in the model",
-            "type": "array",
-            "items": {
-                "oneOf": [{
-                    "description": "A scalar-valued constraint",
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "function": {
-                            "$ref": "#/definitions/scalar_functions"
-                        },
-                        "set": {
-                            "$ref": "#/definitions/scalar_sets"
-                        }
-                    },
-                    "required": ["function", "set"]
-                }, {
-                    "description": "A vector-valued constraint",
-                    "type": "object",
-                    "properties": {
-                        "name": {
-                            "type": "string"
-                        },
-                        "function": {
-                            "$ref": "#/definitions/vector_functions"
-                        },
-                        "set": {
-                            "$ref": "#/definitions/vector_sets"
-                        }
-                    },
-                    "required": ["function", "set"]
-                }]
-            },
-            "uniqueItems": true
-        }
-    },
-    "required": ["variables", "objectives", "constraints"]
+    }
 }
