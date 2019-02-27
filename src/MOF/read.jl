@@ -1,4 +1,4 @@
-function MOI.read_from_file(model::Model, io::IO; convert_to_nlp_block = true)
+function MOI.read_from_file(model::Model, io::IO)
     if !MOI.is_empty(model)
         error("Cannot read model from file as destination model is not empty.")
     end
@@ -11,9 +11,7 @@ function MOI.read_from_file(model::Model, io::IO; convert_to_nlp_block = true)
     name_map = read_variables(model, object)
     read_objectives(model, object, name_map)
     read_constraints(model, object, name_map)
-    if convert_to_nlp_block
-        convert_nlp_to_nlpblock(model)
-    end
+    convert_nlp_to_nlpblock(model)
     return
 end
 
@@ -60,13 +58,13 @@ end
 replace_variable_index_with_jump_vars(expr, x::Vector{JuMP.VariableRef}) = expr
 
 
-moi_to_jump_expr(f, s::MOI.LessThan) = Expr(:call, :(<=), f.expr, s.upper)
-moi_to_jump_expr(f, s::MOI.GreaterThan) = Expr(:call, :(>=), f.expr, s.lower)
-moi_to_jump_expr(f, s::MOI.EqualTo) = Expr(:call, :(==), f.expr, s.value)
-function moi_to_jump_expr(f, s::MOI.Interval)
-    return Expr(:comparison, s.lower, :(<=), f.expr, :(<=), s.upper)
+moi_to_jump_expr(expr, s::MOI.LessThan) = Expr(:call, :(<=), expr, s.upper)
+moi_to_jump_expr(expr, s::MOI.GreaterThan) = Expr(:call, :(>=), expr, s.lower)
+moi_to_jump_expr(expr, s::MOI.EqualTo) = Expr(:call, :(==), expr, s.value)
+function moi_to_jump_expr(expr, s::MOI.Interval)
+    return Expr(:comparison, s.lower, :(<=), expr, :(<=), s.upper)
 end
-moi_to_jump_expr(f, s) = error("$(typeof(f))-in-$(typeof(s)) not supported.")
+moi_to_jump_expr(f, s) = error("Nonlinear-in-$(typeof(s)) not supported.")
 
 function read_variables(model::Model, object::Object)
     indices = MOI.add_variables(model, length(object["variables"]))

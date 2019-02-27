@@ -109,22 +109,30 @@ end
     @testset "Reading and Writing" begin
         # Write to file.
         model = MOF.Model()
-        (x, y) = MOI.add_variables(model, 2)
+        (w, x, y, z) = MOI.add_variables(model, 4)
+        MOI.set(model, MOI.VariableName(), w, "w")
         MOI.set(model, MOI.VariableName(), x, "var_x")
         MOI.set(model, MOI.VariableName(), y, "y")
-        con = MOI.add_constraint(model,
-                 MOF.Nonlinear(:(2 * $x + sin($x)^2 - $y)),
-                 MOI.EqualTo(1.0))
-        MOI.set(model, MOI.ConstraintName(), con, "con")
+        MOI.set(model, MOI.VariableName(), y, "z")
+        nlp_block = MOI.NLPBlockData(
+            MOI.NLPBoundsPair.([25, 40], [Inf, 40]),
+            ExprEvaluator(
+                :(x[$w] * x[$z] * (x[$w] + x[$x] + x[$y]) + x[$y]),
+                [
+                    :(x[$w] * x[$x] * x[$y] * x[$z] >= 25),
+                    :(x[$w]^2 + x[$x]^2 + x[$y]^2 + x[$z]^2 == 40)
+                ]
+            ),
+            true
+        )
+        MOI.set(model, MOI.NLPBlock(), nlp_block)
         MOI.write_to_file(model, TEST_MOF_FILE)
         # Read the model back in.
         model2 = MOF.Model()
-        MOI.read_from_file(model2, TEST_MOF_FILE; convert_to_nlp_block = false)
-        con2 = MOI.get(model2, MOI.ConstraintIndex, "con")
-        foo2 = MOI.get(model2, MOI.ConstraintFunction(), con2)
-        # Test that we recover the constraint.
-        @test foo2.expr == :(2 * $x + sin($x)^2 - $y)
-        @test MOI.get(model, MOI.ConstraintSet(), con) ==
-                MOI.get(model2, MOI.ConstraintSet(), con2)
+        MOI.read_from_file(model2, TEST_MOF_FILE)
+        nlp_block = MOI.get(model2, MOI.NLPBlock())
+        MOI.initialize(nlp_block.evaluator, [:ExprGraph])
+        expr = MOI.constraint_expr(nlp_block.evaluator, 1)
+        @test expr == :(2 * x[$x] + sin(x[$x])^2 - x[$y] - 1.0 == 0.0)
     end
 end
