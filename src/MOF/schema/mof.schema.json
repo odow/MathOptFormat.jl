@@ -186,7 +186,7 @@
                     }
                 }
             }, {
-                "description": "Nnary operators.",
+                "description": "N-ary operators.",
                 "required": ["args"],
                 "properties": {
                     "head": {

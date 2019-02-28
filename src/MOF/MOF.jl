@@ -6,7 +6,7 @@ using DataStructures, JSON, MathOptInterface
 
 import ..MathOptFormat
 import JSONSchema
-const SCHEMA_PATH = joinpath(@__DIR__, "mof.schema.json")
+const SCHEMA_PATH = joinpath(@__DIR__, "schema", "mof.schema.json")
 
 # we use an ordered dict to make the JSON printing nicer
 const Object = OrderedDict{String, Any}
