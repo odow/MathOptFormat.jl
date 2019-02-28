@@ -9,20 +9,21 @@
     "objectives": [{
         "sense": "min",
         "function": {
+            "description": "Note that the format is `a'x + 0.5 x' Q x + c`.",
             "head": "ScalarQuadraticFunction",
             "affine_terms": [],
             "quadratic_terms": [{
-                    "coefficient": 1,
+                    "coefficient": 2,
                     "variable_1": "x",
                     "variable_2": "x"
                 },
                 {
-                    "coefficient": 2,
+                    "coefficient": 1,
                     "variable_1": "x",
                     "variable_2": "y"
                 },
                 {
-                    "coefficient": 1,
+                    "coefficient": 2,
                     "variable_1": "y",
                     "variable_2": "y"
                 }
