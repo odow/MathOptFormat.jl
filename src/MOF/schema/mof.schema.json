@@ -255,6 +255,7 @@
             "type": "object",
             "required": ["head"],
             "oneOf": [{
+                "description": "The scalar variable `variable`.",
                 "required": ["variable"],
                 "properties": {
                     "head": {
@@ -265,6 +266,7 @@
                     }
                 }
             }, {
+                "description": "The function `a'x + b`, where `a` is a sparse vector specified by a list of `ScalarAffineTerm`s in `terms` and `b` is the scalar in `constant`. Duplicate variables in `terms` are accepted, and the corresponding coefficients are summed together.",
                 "required": ["constant", "terms"],
                 "properties": {
                     "head": {
@@ -281,6 +283,7 @@
                     }
                 }
             }, {
+                "description": "The function `0.5x'Qx + a'x + b`, where `a` is a sparse vector of `ScalarAffineTerm`s in `affine_terms`, `b` is the scalar `constant`, and `Q` is a symmetric matrix specified by a list of `ScalarQuadraticTerm`s in `quadratic_terms`. Duplicate indices in `affine_terms` and `quadratic` are accepted, and the corresponding coefficients are summed together. Mirrored indices in `quadratic_terms` (i.e., `(i,j)` and `(j, i)`) are considered duplicates; only one need to be specified.",
                 "required": ["constant", "affine_terms", "quadratic_terms"],
                 "properties": {
                     "head": {
@@ -303,6 +306,7 @@
                     }
                 }
             }, {
+                "description": "An expression graph representing a scalar function.",
                 "required": ["root", "node_list"],
                 "properties": {
                     "head": {
@@ -325,6 +329,7 @@
             "type": "object",
             "required": ["head"],
             "oneOf": [{
+                "description": "An ordered list of variables.",
                 "required": ["variables"],
                 "properties": {
                     "head": {
@@ -338,6 +343,7 @@
                     }
                 }
             }, {
+                "description": "The function `Ax + b`, where `A` is a sparse matrix specified by a list of `VectorAffineTerm`s in `terms` and `b` is a dense vector specified by `constants`.",
                 "required": ["constants", "terms"],
                 "properties": {
                     "head": {
@@ -357,6 +363,7 @@
                     }
                 }
             }, {
+                "description": "The vector-valued quadratic function `q(x) + Ax + b`, where `q(x)` is specified by a list of `VectorQuadraticTerm`s in `quadratic_terms`, `A` is a sparse matrix specified by a list of `VectorAffineTerm`s in `affine_terms` and `b` is a dense vector specified by `constants`.",
                 "required": ["constants", "affine_terms", "quadratic_terms"],
                 "properties": {
                     "head": {
@@ -388,6 +395,7 @@
             "type": "object",
             "required": ["head"],
             "oneOf": [{
+                "description": "The set `(-inf, upper]`.",
                 "required": ["upper"],
                 "properties": {
                     "head": {
@@ -398,6 +406,7 @@
                     }
                 }
             }, {
+                "description": "The set `[lower, upper)`.",
                 "required": ["lower"],
                 "properties": {
                     "head": {
@@ -408,6 +417,7 @@
                     }
                 }
             }, {
+                "description": "The set `{value}`.",
                 "required": ["value"],
                 "properties": {
                     "head": {
@@ -418,6 +428,7 @@
                     }
                 }
             }, {
+                "description": "Interval: the set `[lower, upper]`\nSemiinteger: the set `{0} ∪ {lower, lower + 1, ..., upper}`\nSemicontinuous: the set `{0} ∪ [lower, upper]`.",
                 "required": ["lower", "upper"],
                 "properties": {
                     "head": {
@@ -431,6 +442,7 @@
                     }
                 }
             }, {
+                "description": "ZeroOne: the set `{0, 1}`\nInteger: the set `ℤ`.",
                 "properties": {
                     "head": {
                         "enum": ["ZeroOne", "Integer"]
@@ -443,6 +455,7 @@
             "type": "object",
             "required": ["head"],
             "oneOf": [{
+                "description": "ExponentialCone: the cone `[x, y, z] ∈ {R³: y * exp(x / y) ≤ z, y ≥ 0}`\nDualExponentialCone: the cone `[u, v, w] ∈ {R³: -u * exp(v / u) ≤ exp(1) * w, u < 0}`.",
                 "properties": {
                     "head": {
                         "enum": ["ExponentialCone", "DualExponentialCone"]
@@ -462,6 +475,7 @@
                     }
                 }
             }, {
+                "description": "Zeros: the set `{0}^{dimension}`\nReals: the set `R^{dimension}`\nNonpositives: the set `R-^{dimension}`\nNonnegatives: the set `R+^{dimension}`\nSecondOrderCone: the cone `[t, x] ∈ {R^{dimension} : t ≥ ||x||₂`\nRotatedSecondOrderCone: the cone `[t, u, x] ∈ {R^{dimension} : 2tu ≥ (||x||₂)²; t, u ≥ 0}\nGeometricMeanCone: the cone `[t, x] ∈ {R^{dimension}: t ≤ (Πxᵢ)^{1 / (dimension-1)}}`.",
                 "required": ["dimension"],
                 "properties": {
                     "head": {
@@ -493,6 +507,7 @@
                     }
                 }
             }, {
+                "description": "PowerCone: the cone `[x, y, z] ∈ {R³: x^{exponent} y^{1-exponent} ≥ |z|; x, y ≥ 0}`\nDualPowerCone: the cone `[u, v, w] ∈ {R³: (u / exponent)^{exponent} (v / (1-exponent))^{1-exponent} ≥ |w|; u, v ≥ 0}`.",
                 "required": ["exponent"],
                 "properties": {
                     "head": {
