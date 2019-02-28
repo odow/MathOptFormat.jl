@@ -3,6 +3,7 @@
     "$id": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json",
     "title": "The schema for MathOptFormat",
     "type": "object",
+    "required": ["version", "variables", "objectives", "constraints"],
     "properties": {
         "version": {
             "description": "The version of MathOptFormat that this schema validates against.",
@@ -20,18 +21,17 @@
             "description": "A human-readable description of the model.",
             "type": "string"
         },
-        "required": ["version", "variables", "objectives", "constraints"],
         "variables": {
             "description": "An array of variables in the model. Each must have a unique name.",
             "type": "array",
             "items": {
                 "type": "object",
+                "required": ["name"],
                 "properties": {
                     "name": {
                         "type": "string"
                     }
-                },
-                "required": ["name"]
+                }
             },
             "uniqueItems": true
         },
@@ -40,6 +40,7 @@
             "type": "array",
             "items": {
                 "type": "object",
+                "required": ["sense", "function"],
                 "properties": {
                     "sense": {
                         "enum": ["min", "max"]
@@ -47,8 +48,7 @@
                     "function": {
                         "$ref": "#/definitions/scalar_functions"
                     }
-                },
-                "required": ["sense", "function"]
+                }
             }
         },
         "constraints": {
@@ -56,12 +56,12 @@
             "type": "array",
             "items": {
                 "type": "object",
+                "required": ["function", "set"],
                 "properties": {
                     "name": {
                         "type": "string"
                     }
                 },
-                "required": ["function", "set"],
                 "oneOf": [{
                     "description": "A scalar-valued constraint.",
                     "properties": {
@@ -89,34 +89,38 @@
     },
     "definitions": {
         "ScalarAffineTerm": {
+            "description": "A helper object that represents `coefficent * variable`.",
             "type": "object",
+            "required": ["coefficient", "variable"],
             "properties": {
-                "variable": {
-                    "type": "string"
-                },
                 "coefficient": {
                     "type": "number"
+                },
+                "variable": {
+                    "type": "string"
                 }
-            },
-            "required": ["variable", "coefficient"]
+            }
         },
         "ScalarQuadraticTerm": {
+            "description": "A helper object that represents `coefficent * variable_1 * variable_2`.",
             "type": "object",
+            "required": ["coefficient", "variable_1", "variable_2"],
             "properties": {
+                "coefficient": {
+                    "type": "number"
+                },
                 "variable_1": {
                     "type": "string"
                 },
                 "variable_2": {
                     "type": "string"
-                },
-                "coefficient": {
-                    "type": "number"
                 }
-            },
-            "required": ["variable_1", "variable_2", "coefficient"]
+            }
         },
         "VectorAffineTerm": {
+            "description": "A helper object that represents a `ScalarAffineTerm` in row `output_index`.",
             "type": "object",
+            "required": ["output_index", "scalar_term"],
             "properties": {
                 "output_index": {
                     "type": "integer",
@@ -125,11 +129,12 @@
                 "scalar_term": {
                     "$ref": "#/definitions/ScalarAffineTerm"
                 }
-            },
-            "required": ["output_index", "scalar_term"]
+            }
         },
         "VectorQuadraticTerm": {
+            "description": "A helper object that represents a `ScalarQuadraticTerm` in row `output_index`.",
             "type": "object",
+            "required": ["output_index", "scalar_term"],
             "properties": {
                 "output_index": {
                     "type": "integer",
@@ -138,14 +143,15 @@
                 "scalar_term": {
                     "$ref": "#/definitions/ScalarQuadraticTerm"
                 }
-            },
-            "required": ["output_index", "scalar_term"]
+            }
         },
         "NonlinearTerm": {
             "description": "A node in an expresion graph representing a nonlinear function.",
+            "type": "object",
+            "required": ["head"],
             "oneOf": [{
                 "description": "Unary operators.",
-                "type": "object",
+                "required": ["args"],
                 "properties": {
                     "head": {
                         "enum": [
@@ -162,11 +168,10 @@
                         "minItems": 1,
                         "maxItems": 1
                     }
-                },
-                "required": ["head", "args"]
+                }
             }, {
                 "description": "Binary operators.",
-                "type": "object",
+                "required": ["args"],
                 "properties": {
                     "head": {
                         "enum": ["/", "^"]
@@ -179,11 +184,10 @@
                         "minItems": 2,
                         "maxItems": 2
                     }
-                },
-                "required": ["head", "args"]
+                }
             }, {
                 "description": "Nnary operators.",
-                "type": "object",
+                "required": ["args"],
                 "properties": {
                     "head": {
                         "enum": ["+", "-", "*", "min", "max"]
@@ -195,11 +199,10 @@
                         },
                         "minItems": 1
                     }
-                },
-                "required": ["head", "args"]
+                }
             }, {
                 "description": "A real-valued numeric constant.",
-                "type": "object",
+                "required": ["value"],
                 "properties": {
                     "head": {
                         "const": "real"
@@ -207,11 +210,10 @@
                     "value": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "value"]
+                }
             }, {
                 "description": "A complex-valued numeric constant.",
-                "type": "object",
+                "required": ["real", "imag"],
                 "properties": {
                     "head": {
                         "const": "complex"
@@ -222,11 +224,10 @@
                     "imag": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "real", "imag"]
+                }
             }, {
                 "description": "A reference to an optimization variable",
-                "type": "object",
+                "required": ["name"],
                 "properties": {
                     "head": {
                         "const": "variable"
@@ -234,11 +235,10 @@
                     "name": {
                         "type": "string"
                     }
-                },
-                "required": ["head", "name"]
+                }
             }, {
                 "description": "A pointer to a (1-indexed) element in the `node_list` field in a nonlinear function",
-                "type": "object",
+                "required": ["index"],
                 "properties": {
                     "head": {
                         "const": "node"
@@ -247,14 +247,15 @@
                         "type": "integer",
                         "minimum": 1
                     }
-                },
-                "required": ["head", "index"]
+                }
             }]
         },
         "scalar_functions": {
             "description": "A schema for the scalar-valued functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
+            "type": "object",
+            "required": ["head"],
             "oneOf": [{
-                "type": "object",
+                "required": ["variable"],
                 "properties": {
                     "head": {
                         "const": "SingleVariable"
@@ -262,10 +263,9 @@
                     "variable": {
                         "type": "string"
                     }
-                },
-                "required": ["head", "variable"]
+                }
             }, {
-                "type": "object",
+                "required": ["constant", "terms"],
                 "properties": {
                     "head": {
                         "const": "ScalarAffineFunction"
@@ -279,10 +279,9 @@
                             "$ref": "#/definitions/ScalarAffineTerm"
                         }
                     }
-                },
-                "required": ["head", "constant", "terms"]
+                }
             }, {
-                "type": "object",
+                "required": ["constant", "affine_terms", "quadratic_terms"],
                 "properties": {
                     "head": {
                         "const": "ScalarQuadraticFunction"
@@ -302,10 +301,9 @@
                             "$ref": "#/definitions/ScalarQuadraticTerm"
                         }
                     }
-                },
-                "required": ["head", "constant", "affine_terms", "quadratic_terms"]
+                }
             }, {
-                "type": "object",
+                "required": ["root", "node_list"],
                 "properties": {
                     "head": {
                         "const": "Nonlinear"
@@ -319,14 +317,15 @@
                             "$ref": "#/definitions/NonlinearTerm"
                         }
                     }
-                },
-                "required": ["head", "root", "node_list"]
+                }
             }]
         },
         "vector_functions": {
             "description": "A schema for the vector-valued functions defined by MathOptFormat.See http://www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Functions-and-function-modifications-1 for a list of the functions and their meanings.",
+            "type": "object",
+            "required": ["head"],
             "oneOf": [{
-                "type": "object",
+                "required": ["variables"],
                 "properties": {
                     "head": {
                         "const": "VectorOfVariables"
@@ -337,10 +336,9 @@
                             "type": "string"
                         }
                     }
-                },
-                "required": ["head", "variables"]
+                }
             }, {
-                "type": "object",
+                "required": ["constants", "terms"],
                 "properties": {
                     "head": {
                         "const": "VectorAffineFunction"
@@ -357,10 +355,9 @@
                             "$ref": "#/definitions/VectorAffineTerm"
                         }
                     }
-                },
-                "required": ["head", "constants", "terms"]
+                }
             }, {
-                "type": "object",
+                "required": ["constants", "affine_terms", "quadratic_terms"],
                 "properties": {
                     "head": {
                         "const": "VectorQuadraticFunction"
@@ -383,14 +380,15 @@
                             "$ref": "#/definitions/VectorQuadraticTerm"
                         }
                     }
-                },
-                "required": ["head", "constants", "affine_terms", "quadratic_terms"]
+                }
             }]
         },
         "scalar_sets": {
             "description": "A schema for the scalar-valued sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
+            "type": "object",
+            "required": ["head"],
             "oneOf": [{
-                "type": "object",
+                "required": ["upper"],
                 "properties": {
                     "head": {
                         "const": "LessThan"
@@ -398,10 +396,9 @@
                     "upper": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "upper"]
+                }
             }, {
-                "type": "object",
+                "required": ["lower"],
                 "properties": {
                     "head": {
                         "const": "GreaterThan"
@@ -409,10 +406,9 @@
                     "lower": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "lower"]
+                }
             }, {
-                "type": "object",
+                "required": ["value"],
                 "properties": {
                     "head": {
                         "const": "EqualTo"
@@ -420,10 +416,9 @@
                     "value": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "value"]
+                }
             }, {
-                "type": "object",
+                "required": ["lower", "upper"],
                 "properties": {
                     "head": {
                         "enum": ["Interval", "Semiinteger", "Semicontinuous"]
@@ -434,30 +429,27 @@
                     "upper": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "lower", "upper"]
+                }
             }, {
-                "type": "object",
                 "properties": {
                     "head": {
                         "enum": ["ZeroOne", "Integer"]
                     }
-                },
-                "required": ["head"]
+                }
             }]
         },
         "vector_sets": {
             "description": "A schema for the vector-valued sets defined by MathOptFormat. See http: //www.juliaopt.org/MathOptInterface.jl/v0.8/apireference/#Sets-1 for a list of the sets and their meanings.",
+            "type": "object",
+            "required": ["head"],
             "oneOf": [{
-                "type": "object",
                 "properties": {
                     "head": {
                         "enum": ["ExponentialCone", "DualExponentialCone"]
                     }
-                },
-                "required": ["head"]
+                }
             }, {
-                "type": "object",
+                "required": ["weights"],
                 "properties": {
                     "head": {
                         "enum": ["SOS1", "SOS2"]
@@ -468,10 +460,9 @@
                             "type": "number"
                         }
                     }
-                },
-                "required": ["head", "weights"]
+                }
             }, {
-                "type": "object",
+                "required": ["dimension"],
                 "properties": {
                     "head": {
                         "enum": [
@@ -484,10 +475,9 @@
                         "type": "integer",
                         "minimum": 1
                     }
-                },
-                "required": ["head", "dimension"]
+                }
             }, {
-                "type": "object",
+                "required": ["side_dimension"],
                 "properties": {
                     "head": {
                         "enum": [
@@ -501,10 +491,9 @@
                         "type": "integer",
                         "minimum": 1
                     }
-                },
-                "required": ["head", "side_dimension"]
+                }
             }, {
-                "type": "object",
+                "required": ["exponent"],
                 "properties": {
                     "head": {
                         "enum": ["PowerCone", "DualPowerCone"]
@@ -512,8 +501,7 @@
                     "exponent": {
                         "type": "number"
                     }
-                },
-                "required": ["head", "exponent"]
+                }
             }]
         }
     }
