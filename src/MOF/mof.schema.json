@@ -5,14 +5,19 @@
     "type": "object",
     "properties": {
         "version": {
+            "description": "The version of MathOptFormat that this schema validates against.",
             "const": 0
         },
+        "name": {
+            "description": "The name of the model.",
+            "type": "string"
+        },
         "author": {
-            "description": "The author of the model for citation purposes",
+            "description": "The author of the model for citation purposes.",
             "type": "string"
         },
         "description": {
-            "description": "A human-readable description of the model",
+            "description": "A human-readable description of the model.",
             "type": "string"
         },
         "required": ["version", "variables", "objectives", "constraints"],
@@ -31,7 +36,7 @@
             "uniqueItems": true
         },
         "objectives": {
-            "description": "An array of objectives in the model",
+            "description": "An array of objectives in the model.",
             "type": "array",
             "items": {
                 "type": "object",
@@ -58,7 +63,7 @@
                 },
                 "required": ["function", "set"],
                 "oneOf": [{
-                    "description": "A scalar-valued constraint",
+                    "description": "A scalar-valued constraint.",
                     "properties": {
                         "function": {
                             "$ref": "#/definitions/scalar_functions"
@@ -68,7 +73,7 @@
                         }
                     }
                 }, {
-                    "description": "A vector-valued constraint",
+                    "description": "A vector-valued constraint.",
                     "properties": {
                         "function": {
                             "$ref": "#/definitions/vector_functions"
@@ -139,13 +144,13 @@
         "NonlinearTerm": {
             "description": "A node in an expresion graph representing a nonlinear function.",
             "oneOf": [{
-                "description": "Unary operators",
+                "description": "Unary operators.",
                 "type": "object",
                 "properties": {
                     "head": {
                         "enum": [
-                            "log", "log10", "exp", "sqrt", "floor", "ceil", "abs",
-                            "cos", "sin", "tan", "acos", "asin", "atan",
+                            "log", "log10", "exp", "sqrt", "floor", "ceil",
+                            "abs", "cos", "sin", "tan", "acos", "asin", "atan",
                             "cosh", "sinh", "tanh", "acosh", "asinh", "atanh"
                         ]
                     },
@@ -160,7 +165,7 @@
                 },
                 "required": ["head", "args"]
             }, {
-                "description": "Binary operators",
+                "description": "Binary operators.",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -177,7 +182,7 @@
                 },
                 "required": ["head", "args"]
             }, {
-                "description": "Nnary operators",
+                "description": "Nnary operators.",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -193,7 +198,7 @@
                 },
                 "required": ["head", "args"]
             }, {
-                "description": "A real-valued numeric constant",
+                "description": "A real-valued numeric constant.",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -205,7 +210,7 @@
                 },
                 "required": ["head", "value"]
             }, {
-                "description": "A complex-valued numeric constant",
+                "description": "A complex-valued numeric constant.",
                 "type": "object",
                 "properties": {
                     "head": {
@@ -469,7 +474,11 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": ["Zeros", "Reals", "Nonpositives", "Nonnegatives", "SecondOrderCone", "RotatedSecondOrderCone", "GeometricMeanCone"]
+                        "enum": [
+                            "Zeros", "Reals", "Nonpositives", "Nonnegatives",
+                            "SecondOrderCone", "RotatedSecondOrderCone",
+                            "GeometricMeanCone"
+                        ]
                     },
                     "dimension": {
                         "type": "integer",
@@ -481,7 +490,12 @@
                 "type": "object",
                 "properties": {
                     "head": {
-                        "enum": ["RootDetConeTriangle", "RootDetConeSquare", "LogDetConeTriangle", "LogDetConeSquare", "PositiveSemidefiniteConeTriangle", "PositiveSemidefiniteConeSquare"]
+                        "enum": [
+                            "RootDetConeTriangle", "RootDetConeSquare",
+                            "LogDetConeTriangle", "LogDetConeSquare",
+                            "PositiveSemidefiniteConeTriangle",
+                            "PositiveSemidefiniteConeSquare"
+                        ]
                     },
                     "side_dimension": {
                         "type": "integer",
