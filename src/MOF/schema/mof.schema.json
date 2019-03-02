@@ -30,6 +30,10 @@
                 "properties": {
                     "name": {
                         "type": "string"
+                    },
+                    "primal_start": {
+                        "description": "An initial value that the optimizer may use to warm-start the solution process.",
+                        "type": "number"
                     }
                 }
             },
