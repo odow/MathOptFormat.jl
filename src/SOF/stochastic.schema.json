@@ -1,0 +1,184 @@
+{
+    "$schema": "https://json-schema.org/schema#",
+    "$id": "https://github.com/odow/MathOptFormat.jl/tree/master/src/stochastic.schema.json",
+    "title": "Multistage stochastic programming",
+    "type": "object",
+    "required": ["version", "root_node", "nodes", "arcs"],
+    "properties": {
+        "version": {
+            "const": 0
+        },
+        "author": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "root_node": {
+            "type": "object",
+            "required": ["name", "states"],
+            "properties": {
+                "name": {
+                    "description": "The name of the root node",
+                    "type": "string"
+                },
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "initial_value"],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "initial_value": {
+                                "description": "The value of the state variable at the root node.",
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "nodes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["name", "states", "model"],
+                "properties": {
+                    "name": {
+                        "description": "The name of the node.",
+                        "type": "string"
+                    },
+                    "states": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "description": "The name of the state-variable in `#/root_node`.",
+                                    "type": "string"
+                                },
+                                "in": {
+                                    "description": "The name of the incoming state-variable.",
+                                    "type": "string"
+                                },
+                                "out": {
+                                    "description": "The name of the outgoing state-variable.",
+                                    "type": "string"
+                                },
+                            }
+                        }
+                    },
+                    "model": {
+                        "description": "A MathOptFormat model",
+                        "$ref": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json#"
+                    },
+                    "noise_terms": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["probability", "modifications"],
+                            "properties": {
+                                "probability": {
+                                    "type": "number",
+                                    "minimum": 0.0,
+                                    "maximum": 1.0
+                                },
+                                "modifications": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/definitions/modification"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                }
+            }
+        },
+    },
+    "arcs": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "required": ["from", "to", "probability"],
+            "properties": {
+                "from": {
+                    "type": "string"
+                },
+                "to": {
+                    "type": "string"
+                },
+                "probability": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0
+                }
+            }
+        }
+    }
+},
+"definitions": {
+    "modification": {
+        "type": "object",
+        "required": ["head", "constraint"],
+        "properties": {
+            "constraint": {
+                "type": "name"
+            }
+        },
+        "oneOf": [{
+            "required": ["new_set"],
+            "properties": {
+                "head": {
+                    "const": "NewSet"
+                },
+                "new_set": {
+                    "oneOf": [{
+                        "$ref": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json#/definitions/scalar_sets"
+                    }, {
+                        "$ref": "https://github.com/odow/MathOptFormat.jl/tree/master/src/MOF/mof.schema.json#/definitions/vector_sets"
+                    }]
+                }
+            }
+        }, {
+            "required": ["constant"],
+            "properties": {
+                "head": {
+                    "const": "ScalarConstantChange"
+                },
+                "constant": {
+                    "type": "number"
+                }
+            }
+        }, {
+            "required": ["constants"],
+            "properties": {
+                "head": {
+                    "const": "VectorConstantChange"
+                },
+                "constants": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    }
+                }
+            }
+        }, {
+            "required": ["coefficient", "variable"],
+            "properties": {
+                "head": {
+                    "const": "ScalarCoefficientChange"
+                },
+                "coefficient": {
+                    "type": "number"
+                },
+                "variable": {
+                    "type": "string"
+                }
+            }
+        }]
+    }
+}
+}

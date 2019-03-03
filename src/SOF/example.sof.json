@@ -1,0 +1,163 @@
+{
+    "version": 0,
+    "author": "Oscar Dowson",
+    "description": "An example for StochasticOptFormat",
+    "root_node": {
+        "name": "ROOT",
+        "states": [{
+            "name": "volume",
+            "initial_value": 200.0
+        }]
+    },
+    "nodes": [{
+        "name": "stage_1",
+        "states": [{
+            "name": "volume",
+            "in": "volume_in",
+            "out": "volume_out"
+        }],
+        "noise_terms": [{
+            "probability": 0.3333333333333333,
+            "modifications": [{
+                "head": "NewSet",
+                "constraint": "volume_balance",
+                "new_set": {
+                    "head": "EqualTo",
+                    "value": 0.0
+                }
+            }]
+        }, {
+            "probability": 0.3333333333333333,
+            "modifications": [{
+                "head": "NewSet",
+                "constraint": "volume_balance",
+                "new_set": {
+                    "head": "EqualTo",
+                    "value": 50.0
+                }
+            }]
+        }, {
+            "probability": 0.3333333333333333,
+            "modifications": [{
+                "head": "NewSet",
+                "constraint": "volume_balance",
+                "new_set": {
+                    "head": "EqualTo",
+                    "value": 100.0
+                }
+            }]
+        }],
+        "model": {
+            "version": 0,
+            "variables": [{
+                "name": "volume_in"
+            }, {
+                "name": "volume_out"
+            }, {
+                "name": "thermal_generation"
+            }, {
+                "name": "hydro_generation"
+            }, {
+                "name": "hydro_spill"
+            }],
+            "objectives": [{
+                "sense": "min",
+                "function": {
+                    "head": "ScalarAffineFunction",
+                    "terms": [{
+                        "coefficient": 50,
+                        "variable": "thermal_generation"
+                    }],
+                    "constant": 0
+                }
+            }],
+            "constraints": [{
+                "name": "volume_balance",
+                "function": {
+                    "head": "ScalarAffineFunction",
+                    "terms": [{
+                        "coefficient": 1,
+                        "variable": "volume_out"
+                    }, {
+                        "coefficient": -1,
+                        "variable": "volume_in"
+                    }, {
+                        "coefficient": 1,
+                        "variable": "hydro_generation"
+                    }, {
+                        "coefficient": 1,
+                        "variable": "hydro_spill"
+                    }],
+                    "constant": 0
+                },
+                "set": {
+                    "head": "EqualTo",
+                    "value": 0
+                }
+            }, {
+                "name": "demand_constraint",
+                "function": {
+                    "head": "ScalarAffineFunction",
+                    "terms": [{
+                        "coefficient": 1,
+                        "variable": "thermal_generation"
+                    }, {
+                        "coefficient": 1,
+                        "variable": "hydro_generation"
+                    }],
+                    "constant": 0
+                },
+                "set": {
+                    "head": "EqualTo",
+                    "value": 150
+                }
+            }, {
+                "function": {
+                    "head": "SingleVariable",
+                    "variable": "volume_out"
+                },
+                "set": {
+                    "head": "Interval",
+                    "lower": 0,
+                    "upper": 200
+                }
+            }, {
+                "function": {
+                    "head": "SingleVariable",
+                    "variable": "thermal_generation"
+                },
+                "set": {
+                    "head": "GreaterThan",
+                    "lower": 0
+                }
+            }, {
+                "function": {
+                    "head": "SingleVariable",
+                    "variable": "hydro_generation"
+                },
+                "set": {
+                    "head": "GreaterThan",
+                    "lower": 0
+                }
+            }, {
+                "function": {
+                    "head": "SingleVariable",
+                    "variable": "hydro_spill"
+                },
+                "set": {
+                    "head": "GreaterThan",
+                    "lower": 0
+                }
+            }]
+        }
+    }],
+    "arcs": [{
+        "from": "ROOT",
+        "to": "stage_1",
+        "probability": 1.0
+    }, {
+        "from": "stage_1",
+        "to": "stage_1",
+        "probability": 0.9
+    }]
+}
