@@ -18,8 +18,8 @@ function create_unique_names(model::MOI.ModelLike)
         while new_name in names
             new_name *= "_1"
         end
+        push!(names, new_name)
         if new_name != original_name
-            push!(names, new_name)
             if original_name == ""
                 @warn("Blank name detected for variable $(index). Renamed to " *
                       "$(new_name).")
