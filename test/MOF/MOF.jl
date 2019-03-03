@@ -56,6 +56,8 @@ end
     @testset "Blank variable name" begin
         model = MOF.Model()
         variable_index = MOI.add_variable(model)
+        @test_throws Exception MOF.moi_to_object(variable_index, model)
+        MathOptFormat.create_unique_names(model)
         @test MOF.moi_to_object(variable_index, model) ==
             MOF.Object("name" => "x1")
     end

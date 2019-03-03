@@ -10,6 +10,28 @@ include("LP/LP.jl")
 include("MOF/MOF.jl")
 include("MPS/MPS.jl")
 
+function create_unique_names(model::MOI.ModelLike)
+    names = Set{String}()
+    for index in MOI.get(model, MOI.ListOfVariableIndices())
+        original_name = MOI.get(model, MOI.VariableName(), index)
+        new_name = original_name != "" ? original_name : "x$(index.value)"
+        while new_name in names
+            new_name *= "_1"
+        end
+        if new_name != original_name
+            push!(names, new_name)
+            if original_name == ""
+                @warn("Blank name detected for variable $(index). Renamed to " *
+                      "$(new_name).")
+            else
+                @warn("Duplicate name $(new_name) detected for variable " *
+                      "$(index). Renamed to $(new_name).")
+            end
+            MOI.set(model, MOI.VariableName(), index, new_name)
+        end
+    end
+end
+
 function gzip_open(f::Function, filename::String, mode::String)
     if endswith(filename, ".gz")
         GZip.open(f, filename, mode)
