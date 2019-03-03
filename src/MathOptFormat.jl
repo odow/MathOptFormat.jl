@@ -13,7 +13,7 @@ include("MPS/MPS.jl")
 """
     create_unique_names(model::MOI.ModelLike)
 
-
+Rename variables in `model` to ensure that all variables have a unique name.
 """
 function create_unique_names(model::MOI.ModelLike)
     variables = MOI.get(model, MOI.ListOfVariableIndices())
