@@ -6,7 +6,7 @@ using DataStructures, JSON, MathOptInterface
 
 import JuMP
 
-# we use an ordered dict to make the JSON printing nicer
+# We use an ordered dict to make the JSON printing nicer.
 const Object = OrderedDict{String, Any}
 
 const MOI = MathOptInterface
@@ -15,7 +15,6 @@ const MOIU = MOI.Utilities
 struct Nonlinear <: MOI.AbstractScalarFunction
     expr::Expr
 end
-Base.copy(nonlinear::Nonlinear) = Nonlinear(copy(nonlinear.expr))
 
 MOIU.@model(InnerModel,
     (MOI.ZeroOne, MOI.Integer),
@@ -29,7 +28,7 @@ MOIU.@model(InnerModel,
         MOI.PositiveSemidefiniteConeTriangle, MOI.PositiveSemidefiniteConeSquare,
         MOI.ExponentialCone, MOI.DualExponentialCone),
     (MOI.PowerCone, MOI.DualPowerCone, MOI.SOS1, MOI.SOS2),
-    (MOI.SingleVariable, Nonlinear),
+    (MOI.SingleVariable,),
     (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
     (MOI.VectorOfVariables,),
     (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)

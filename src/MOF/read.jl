@@ -9,33 +9,26 @@ function MOI.read_from_file(model::Model, io::IO)
               "you are trying to read is version $(object["version"]).")
     end
     name_map = read_variables(model, object)
-    read_objectives(model, object, name_map)
-    read_constraints(model, object, name_map)
-    convert_nlp_to_nlpblock(model)
+    nonlinear_objective = read_objectives(model, object, name_map)
+    nonlinear_constraints = read_constraints(model, object, name_map)
+    convert_nlp_to_nlpblock(model, nonlinear_objective, nonlinear_constraints)
     return
 end
 
-function convert_nlp_to_nlpblock(model::Model)
+function convert_nlp_to_nlpblock(
+        model::Model, nonlinear_objective, nonlinear_constraints)
     has_nonlinear = false
     jump = JuMP.Model()
     JuMP.@variable(jump, x[1:MOI.get(model, MOI.NumberOfVariables())])
-    for (F, S) in MOI.get(model, MOI.ListOfConstraints())
-        F != Nonlinear && continue
-        for index in MOI.get(model, MOI.ListOfConstraintIndices{F, S}())
-            func = MOI.get(model, MOI.ConstraintFunction(), index)
-            set = MOI.get(model, MOI.ConstraintSet(), index)
-            expr = replace_variable_index_with_jump_vars(func.expr, x)
-            JuMP.add_NL_constraint(jump, moi_to_jump_expr(expr, set))
-            has_nonlinear = true
-            # Remove this constraint because we'll add it to NLPBLock.
-            MOI.delete(model, index)
-        end
-    end
-    if MOI.get(model, MOI.ObjectiveFunctionType()) == Nonlinear
-        sense = MOI.get(model, MOI.ObjectiveSense())
-        func = MOI.get(model, MOI.ObjectiveFunction{Nonlinear}())
+    for (func, set) in nonlinear_constraints
         expr = replace_variable_index_with_jump_vars(func.expr, x)
-        MOI.set_NL_objective(jump, sense, expr)
+        JuMP.add_NL_constraint(jump, moi_to_jump_expr(expr, set))
+        has_nonlinear = true
+    end
+    if nonlinear_objective !== nothing
+        sense = MOI.get(model, MOI.ObjectiveSense())
+        expr = replace_variable_index_with_jump_vars(nonlinear_objective.expr, x)
+        JuMP.set_NL_objective(jump, sense, expr)
         has_nonlinear = true
     end
     if has_nonlinear
@@ -94,23 +87,37 @@ function read_objectives(model::Model, object::Object,
         objective = first(object["objectives"])
         MOI.set(model, MOI.ObjectiveSense(),
                 read_objective_sense(objective["sense"]))
-        objective_type = MOI.get(model, MOI.ObjectiveFunctionType())
-        MOI.set(model, MOI.ObjectiveFunction{objective_type}(),
-                function_to_moi(objective["function"], model, name_map))
+        objective_function = function_to_moi(objective["function"], model, name_map)
+        objective_function_type = typeof(objective_function)
+        if objective_function_type == MOF.Nonlinear
+            # Don't add the nonlinear objective here, return it and it will be
+            # added later.
+            return objective_function
+        else
+            MOI.set(
+                model, MOI.ObjectiveFunction{objective_function_type}(),
+                objective_function)
+        end
     end
     return
 end
 
 function read_constraints(model::Model, object::Object,
                           name_map::Dict{String, MOI.VariableIndex})
+    nonlinear_constraints = Tuple{Nonlinear, MOI.AbstractSet}[]
     for constraint in object["constraints"]
         foo = function_to_moi(constraint["function"], model, name_map)
         set = set_to_moi(constraint["set"], model, name_map)
-        index = MOI.add_constraint(model, foo, set)
-        if haskey(constraint, "name")
-            MOI.set(model, MOI.ConstraintName(), index, constraint["name"])
+        if typeof(foo) == Nonlinear
+            push!(nonlinear_constraints, (foo, set))
+        else
+            index = MOI.add_constraint(model, foo, set)
+            if haskey(constraint, "name")
+                MOI.set(model, MOI.ConstraintName(), index, constraint["name"])
+            end
         end
     end
+    return nonlinear_constraints
 end
 
 function read_objective_sense(sense::String)

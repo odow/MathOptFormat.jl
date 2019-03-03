@@ -21,13 +21,17 @@ MOI.initialize(::ExprEvaluator, features) = nothing
 MOI.objective_expr(evaluator::ExprEvaluator) = evaluator.objective
 MOI.constraint_expr(evaluator::ExprEvaluator, i::Int) = evaluator.constraints[i]
 
-function HS071()
+function HS071(v)
     return MOI.NLPBlockData(
         MOI.NLPBoundsPair.([25, 40], [Inf, 40]),
-        ExprEvaluator(:(x[1] * x[4] * (x[1] + x[2] + x[3]) + x[3]),
-                      [:(x[1] * x[2] * x[3] * x[4] >= 25),
-                       :(x[1]^2 + x[2]^2 + x[3]^2 + x[4]^2 == 40)]),
-        true)
+        ExprEvaluator(
+            :(x[$(v[1])] * x[$(v[4])] * (x[$(v[1])] + x[$(v[2])] + x[$(v[3])]) + x[$(v[3])]),
+            [
+                :(x[$(v[1])] * x[$(v[2])] * x[$(v[3])] * x[$(v[4])] >= 25),
+                :(x[$(v[1])]^2 + x[$(v[2])]^2 + x[$(v[3])]^2 + x[$(v[4])]^2 == 40)
+            ]),
+        true
+    )
 end
 
 @testset "Nonlinear functions" begin
@@ -39,7 +43,7 @@ end
         end
         MOI.add_constraints(model, MOI.SingleVariable.(x),
                             Ref(MOI.Interval(1.0, 5.0)))
-        MOI.set(model, MOI.NLPBlock(), HS071())
+        MOI.set(model, MOI.NLPBlock(), HS071(x))
         MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
         MOI.write_to_file(model, TEST_MOF_FILE)
         @test replace(read(TEST_MOF_FILE, String), '\r' => "") ==
@@ -72,8 +76,9 @@ end
         @test_throws Exception MOF.convert_expr_to_mof(
             :(1 + 2im), node_list, variable_to_string)
         # Invalid number of variables.
-        @test_throws Exception MOF.substitute_variables(
-            :(x[1] * x[2]), [MOI.VariableIndex(1)])
+        @test MOF.lift_variable_indices(
+            :(x[MOI.VariableIndex(1)] * x[MOI.VariableIndex(2)])
+        ) == :(MOI.VariableIndex(1) * MOI.VariableIndex(2))
         # Function-in-Set
         @test_throws Exception MOF.extract_function_and_set(
             :(foo in set))
@@ -132,7 +137,11 @@ end
         MOI.read_from_file(model2, TEST_MOF_FILE)
         nlp_block = MOI.get(model2, MOI.NLPBlock())
         MOI.initialize(nlp_block.evaluator, [:ExprGraph])
-        expr = MOI.constraint_expr(nlp_block.evaluator, 1)
-        @test expr == :(2 * x[$x] + sin(x[$x])^2 - x[$y] - 1.0 == 0.0)
+        @test MOI.objective_expr(nlp_block.evaluator) ==
+            :(x[$w] * x[$z] * (x[$w] + x[$x] + x[$y]) + x[$y])
+        @test MOI.constraint_expr(nlp_block.evaluator, 1) ==
+            :(x[$w] * x[$x] * x[$y] * x[$z] - 25.0 >= 0.0)
+        @test MOI.constraint_expr(nlp_block.evaluator, 2) ==
+            :(x[$w]^2.0 + x[$x]^2.0 + x[$y]^2.0 + x[$z]^2.0 - 40.0 == 0.0)
     end
 end
