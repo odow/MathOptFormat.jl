@@ -73,6 +73,9 @@ function read_variables(model::Model, object::Object)
         end
         MOI.set(model, MOI.VariableName(), index, name)
         name_map[name] = index
+        if haskey(variable, "primal_start")
+            MOI.set(model, MOI.VariablePrimalStart(), index, variable["primal_start"])
+        end
     end
     return name_map
 end

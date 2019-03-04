@@ -1,0 +1,130 @@
+{
+  "name": "MathOptFormat Model",
+  "version": 0,
+  "variables": [
+    {
+      "name": "x",
+      "primal_start": 1.0
+    },
+    {
+      "name": "y",
+      "primal_start": 2.12
+    },
+    {
+      "name": "z"
+    }
+  ],
+  "objectives": [
+    {
+      "sense": "min",
+      "function": {
+        "head": "Nonlinear",
+        "root": {
+          "head": "node",
+          "index": 7
+        },
+        "node_list": [
+          {
+            "head": "exp",
+            "args": [
+              {
+                "head": "variable",
+                "name": "x"
+              }
+            ]
+          },
+          {
+            "head": "*",
+            "args": [
+              {
+                "head": "variable",
+                "name": "x"
+              },
+              {
+                "head": "node",
+                "index": 1
+              }
+            ]
+          },
+          {
+            "head": "cos",
+            "args": [
+              {
+                "head": "variable",
+                "name": "y"
+              }
+            ]
+          },
+          {
+            "head": "^",
+            "args": [
+              {
+                "head": "variable",
+                "name": "z"
+              },
+              {
+                "head": "real",
+                "value": 3.0
+              }
+            ]
+          },
+          {
+            "head": "+",
+            "args": [
+              {
+                "head": "node",
+                "index": 2
+              },
+              {
+                "head": "node",
+                "index": 3
+              },
+              {
+                "head": "node",
+                "index": 4
+              }
+            ]
+          },
+          {
+            "head": "^",
+            "args": [
+              {
+                "head": "variable",
+                "name": "z"
+              },
+              {
+                "head": "real",
+                "value": 2.0
+              }
+            ]
+          },
+          {
+            "head": "-",
+            "args": [
+              {
+                "head": "node",
+                "index": 5
+              },
+              {
+                "head": "node",
+                "index": 6
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "function": {
+        "head": "SingleVariable",
+        "variable": "z"
+      },
+      "set": {
+        "head": "GreaterThan",
+        "lower": 1.0
+      }
+    }
+  ]
+}

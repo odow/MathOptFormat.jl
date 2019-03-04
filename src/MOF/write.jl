@@ -63,7 +63,12 @@ function moi_to_object(index::MOI.VariableIndex, model::Model)
         # generate a unique name here.
         name = "x$(index.value)"
     end
-    return Object("name" => name)
+    primal_start = MOI.get(model, MOI.VariablePrimalStart(), index)
+    obj = Object("name" => name)
+    if primal_start !== nothing
+        obj["primal_start"] = primal_start
+    end
+    return obj
 end
 
 function moi_to_object(index::MOI.ConstraintIndex{F,S}, model::Model,

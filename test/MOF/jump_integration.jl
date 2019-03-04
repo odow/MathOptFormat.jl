@@ -1,3 +1,8 @@
+import Pkg
+Pkg.add("Ipopt")
+
+using JuMP, MathOptFormat, Ipopt
+
 function MOI.copy_to(dest, src::Model; kwargs...)
     if src.nlp_data !== nothing
         MOI.set(src, MOI.NLPBlock(), JuMP._create_nlp_block_data(src))
@@ -14,33 +19,33 @@ function MOI.copy_to(dest::Model, src; kwargs...)
     return
 end
 
-using JuMP, MathOptFormat, Ipopt
+const JuMP_MOF_FILE = joinpath(@__DIR__, "jump.mof.json")
 
-jump_1 = Model()
-@variable(jump_1, x, start = 1)
-@variable(jump_1, y, start = 2.12)
-@variable(jump_1, z >= 1)
-@NLobjective(jump_1, Min, x * exp(x) + cos(y) + z^3 - z^2)
+@testset "write_to_file" begin
+    jump_1 = Model()
+    @variable(jump_1, x, start = 1)
+    @variable(jump_1, y, start = 2.12)
+    @variable(jump_1, z >= 1)
+    @NLobjective(jump_1, Min, x * exp(x) + cos(y) + z^3 - z^2)
+    mof_1 = MathOptFormat.MOF.Model()
+    MOI.copy_to(mof_1, jump_1)
+    # Uncomment this if needed to rebuild the JuMP_MOF_FILE.
+    # MOI.write_to_file(mof_1, JuMP_MOF_FILE)
+    @test read(JuMP_MOF_FILE, String) == sprint(io -> MOI.write_to_file(mof_1, io))
+end
 
-mof_1 = MathOptFormat.MOF.Model()
-MOI.copy_to(mof_1, jump_1)
-MOI.write_to_file(mof_1, "mof.json")
-
-mof_2 = MathOptFormat.MOF.Model()
-MOI.read_from_file(mof_2, "mof.json")
-
-jump_2 = Model(with_optimizer(Ipopt.Optimizer))
-MOI.copy_to(jump_2, mof_2)
-
-x_2 = JuMP.variable_by_name(jump_2, "x")
-y_2 = JuMP.variable_by_name(jump_2, "y")
-z_2 = JuMP.variable_by_name(jump_2, "z")
-JuMP.set_start_value(y_2, 2.12)
-
-optimize!(jump_2)
-
-@test termination_status(jump_2) == MOI.LOCALLY_SOLVED
-@test objective_value(jump_2) ≈ -1.3678794486503105 atol=1e-6
-@test isapprox(JuMP.value.([x_2, y_2, z_2]), [-1, pi, 1], atol=1e-6)
-
-rm("mof.json")
+@testset "read_from_file" begin
+    mof_2 = MathOptFormat.MOF.Model()
+    MOI.read_from_file(mof_2, JuMP_MOF_FILE)
+    jump_2 = Model(with_optimizer(Ipopt.Optimizer))
+    MOI.copy_to(jump_2, mof_2)
+    x_2 = JuMP.variable_by_name(jump_2, "x")
+    y_2 = JuMP.variable_by_name(jump_2, "y")
+    z_2 = JuMP.variable_by_name(jump_2, "z")
+    @test JuMP.start_value(x_2) == 1.0
+    @test JuMP.start_value(y_2) == 2.12
+    optimize!(jump_2)
+    @test termination_status(jump_2) == MOI.LOCALLY_SOLVED
+    @test objective_value(jump_2) ≈ -1.3678794486503105 atol=1e-6
+    @test isapprox(JuMP.value.([x_2, y_2, z_2]), [-1, pi, 1], atol=1e-6)
+end

@@ -318,8 +318,12 @@ end
             c1: [t, x1, x2, x3, x4] in RootDetConeSquare(2)
         """, ["t", "x1", "x2", "x3", "x4"], ["c1"])
     end
-
-    # Clean up
-    sleep(1.0)  # allow time for unlink to happen
-    rm(TEST_MOF_FILE, force=true)
 end
+
+@testset "JuMP integration" begin
+    include("jump_integration.jl")
+end
+
+# Clean up
+sleep(1.0)  # allow time for unlink to happen
+rm(TEST_MOF_FILE, force=true)
