@@ -2,9 +2,9 @@ using HTTP
 
 escape(s::String) = replace(s, "\\" => "\\\\")
 
-function download_schema(schema_git_hash)
-    schema_path = joinpath(@__DIR__, "$(schema_git_hash).json")
-    r = HTTP.request("GET", "https://raw.githubusercontent.com/odow/MathOptFormat/$(schema_git_hash)/mof.schema.json")
+function download_schema(schema_git_tag)
+    schema_path = joinpath(@__DIR__, "$(schema_git_tag).json")
+    r = HTTP.request("GET", "https://raw.githubusercontent.com/odow/MathOptFormat/$(schema_git_tag)/mof.schema.json")
     if r.status == 200
         open(schema_path, "w") do io
             write(io, String(r.body))
@@ -19,9 +19,8 @@ function download_schema(schema_git_hash)
     end
 end
 
-# Update this hash whenever github.com/odow/MathOptFormat changes the schema.
-# Once a proper version is released, we can change the URL to point to a Github
-# release.
-SCHEMA_GIT_HASH = "650add188c8479c4dd9f327d2baa8306f3ee1f59"
+# Update this tag whenever github.com/odow/MathOptFormat releases a new update to
+# the schema (providing that any code in this package is also updated).
+const SCHEMA_GIT_TAG = "v0.0.0-alpha"
 
-download_schema(SCHEMA_GIT_HASH)
+download_schema(SCHEMA_GIT_TAG)
