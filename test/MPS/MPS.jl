@@ -131,6 +131,27 @@ end
             minobjective: x
         """, ["x"], String[])
     end
+    @testset "default RHS >=" begin
+        test_model_equality("""
+            variables: x
+            minobjective: x
+            c1: 2.0 * x >= 0.0
+        """, ["x"], ["c1"])
+    end
+    @testset "default RHS <=" begin
+        test_model_equality("""
+            variables: x
+            minobjective: x
+            c1: 2.0 * x <= 0.0
+        """, ["x"], ["c1"])
+    end
+    @testset "default RHS ==" begin
+        test_model_equality("""
+            variables: x
+            minobjective: x
+            c1: 2.0 * x == 0.0
+        """, ["x"], ["c1"])
+    end
     @testset "min scalaraffine" begin
         test_model_equality("""
             variables: x

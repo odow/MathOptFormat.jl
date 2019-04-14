@@ -543,6 +543,8 @@ function copy_to(model::Model, temp::TempMPSModel)
             if set !== nothing
                 c = MOI.add_constraint(model, constraint_function, set)
                 MOI.set(model, MOI.ConstraintName(), c, c_name)
+            else
+                error("Expected a non-empty set for $(c_name). Got row=$(row)")
             end
         end
     end
@@ -580,6 +582,15 @@ function parse_rows_line(data::TempMPSModel, items::Vector{String})
         error("Invalid row sense: $(join(items, " "))")
     end
     row = TempRow()
+    # Add some default bounds for the constraints.
+    if sense == "G"
+        row.lower = 0.0
+    elseif sense == "L"
+        row.upper = 0.0
+    elseif sense == "E"
+        row.lower = 0.0
+        row.upper = 0.0
+    end
     row.sense = sense
     data.rows[name] = row
     if sense == "N"
@@ -796,6 +807,11 @@ function parse_bounds_line(data::TempMPSModel, items::Vector{String})
             # In these situations, just ignore the value.
             column.lower = -Inf
             column.upper = Inf
+        elseif bound_type == "BV"
+            # A similar situation happens with BV bounds in leo1 and leo2.
+            column.lower = 0.0
+            column.upper = 1.0
+            column.is_int = true
         else
             error("Invalid bound type $(bound_type): $(join(items, " "))")
         end
