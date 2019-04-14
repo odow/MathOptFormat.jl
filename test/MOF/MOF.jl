@@ -76,14 +76,14 @@ end
         MOIU.test_models_equal(model, model_2, String[], String[])
     end
     @testset "FEASIBILITY_SENSE" begin
-        model = MOF.Model()
+        model = MOF.Model(validate=false)
         x = MOI.add_variable(model)
         MOI.set(model, MOI.VariableName(), x, "x")
         MOI.set(model, MOI.ObjectiveSense(), MOI.FEASIBILITY_SENSE)
         MOI.set(model, MOI.ObjectiveFunction{MOI.SingleVariable}(),
             MOI.SingleVariable(x))
         MOI.write_to_file(model, TEST_MOF_FILE)
-        model_2 = MOF.Model()
+        model_2 = MOF.Model(validate=false)
         MOI.read_from_file(model_2, TEST_MOF_FILE)
         MOIU.test_models_equal(model, model_2, ["x"], String[])
     end
