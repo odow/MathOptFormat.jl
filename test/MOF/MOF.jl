@@ -50,7 +50,7 @@ end
         model = MOF.Model()
         variable_index = MOI.add_variable(model)
         @test_throws Exception MOF.moi_to_object(variable_index, model)
-        MathOptFormat.create_unique_names(model)
+        MathOptFormat.create_unique_names(model, warn=true)
         @test MOF.moi_to_object(variable_index, model) ==
             MOF.Object("name" => "x1")
     end
@@ -62,9 +62,33 @@ end
         MOI.set(model, MOI.VariableName(), y, "x")
         @test MOF.moi_to_object(x, model) == MOF.Object("name" => "x")
         @test MOF.moi_to_object(y, model) == MOF.Object("name" => "x")
-        MathOptFormat.create_unique_names(model)
+        MathOptFormat.create_unique_names(model, warn=true)
         @test MOF.moi_to_object(x, model) == MOF.Object("name" => "x")
         @test MOF.moi_to_object(y, model) == MOF.Object("name" => "x_1")
+    end
+    @testset "Blank constraint name" begin
+        model = MOF.Model()
+        x = MOI.add_variable(model)
+        MOI.set(model, MOI.VariableName(), x, "x")
+        c = MOI.add_constraint(model, MOI.SingleVariable(x), MOI.ZeroOne())
+        name_map = Dict(x => "x")
+        MathOptFormat.create_unique_names(model, warn=true)
+        @test MOF.moi_to_object(c, model, name_map)["name"] == "c1"
+    end
+    @testset "Duplicate constraint name" begin
+        model = MOF.Model()
+        x = MOI.add_variable(model)
+        MOI.set(model, MOI.VariableName(), x, "x")
+        c1 = MOI.add_constraint(model, MOI.SingleVariable(x), MOI.LessThan(1.0))
+        c2 = MOI.add_constraint(model, MOI.SingleVariable(x), MOI.GreaterThan(0.0))
+        MOI.set(model, MOI.ConstraintName(), c1, "c")
+        MOI.set(model, MOI.ConstraintName(), c2, "c")
+        name_map = Dict(x => "x")
+        @test MOF.moi_to_object(c1, model, name_map)["name"] == "c"
+        @test MOF.moi_to_object(c2, model, name_map)["name"] == "c"
+        MathOptFormat.create_unique_names(model, warn=true)
+        @test MOF.moi_to_object(c1, model, name_map)["name"] == "c_1"
+        @test MOF.moi_to_object(c2, model, name_map)["name"] == "c"
     end
 end
 @testset "round trips" begin
