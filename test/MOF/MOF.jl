@@ -33,10 +33,21 @@ end
     failing_models_dir = joinpath(@__DIR__, "failing_models")
 
     @testset "Non-empty model" begin
-        model = MOF.Model()
+        model = MOF.Model(warn=true)
         MOI.add_variable(model)
-        @test_throws Exception MOI.read_from_file(
-            model, joinpath(failing_models_dir, "empty_model.mof.json"))
+        @test !MOI.is_empty(model)
+        exception = ErrorException(
+            "Cannot read model from file as destination model is not empty.")
+        @test_throws exception MOI.read_from_file(
+            model, joinpath(@__DIR__, "empty_model.mof.json"))
+        options = MOI.get(model, MOF.ModelOptions())
+        @test options.warn
+        MOI.empty!(model)
+        @test MOI.is_empty(model)
+        MOI.read_from_file(
+            model, joinpath(@__DIR__, "empty_model.mof.json"))
+        options2 = MOI.get(model, MOF.ModelOptions())
+        @test options2.warn
     end
 
     @testset "$(filename)" for filename in filter(
