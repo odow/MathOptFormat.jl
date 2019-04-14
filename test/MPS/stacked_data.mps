@@ -26,7 +26,7 @@ RANGES
     ranges    con3      4
     ranges    con4      -4
 BOUNDS
- FR bounds    x
+ FR bounds    x         0
  UI bounds    y         4
  LI bounds    y         1
 ENDATA
