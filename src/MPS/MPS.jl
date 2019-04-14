@@ -582,6 +582,14 @@ function parse_rows_line(data::TempMPSModel, items::Vector{String})
         error("Invalid row sense: $(join(items, " "))")
     end
     row = TempRow()
+    row.sense = sense
+    if sense == "N"
+        if data.obj_name != ""
+            # Detected a duplicate objective. Skip it.
+            return name
+        end
+        data.obj_name = name
+    end
     # Add some default bounds for the constraints.
     if sense == "G"
         row.lower = 0.0
@@ -591,14 +599,7 @@ function parse_rows_line(data::TempMPSModel, items::Vector{String})
         row.lower = 0.0
         row.upper = 0.0
     end
-    row.sense = sense
     data.rows[name] = row
-    if sense == "N"
-        if data.obj_name != ""
-            return name
-        end
-        data.obj_name = name
-    end
     return
 end
 
