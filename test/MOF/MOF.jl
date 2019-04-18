@@ -1,5 +1,10 @@
 const MOF = MathOptFormat.MOF
 
+# TODO(odow): see https://github.com/MikeInnes/BSON.jl/pull/28
+# There is a bug in BSON.jl, which causes types to be evaluated in `Main`
+# instead of the current module.
+const OrderedCollections = MathOptFormat.MOF.OrderedCollections
+
 const TEST_MOF_FILE = "test.mof.json"
 
 @test sprint(show, MOF.Model()) == "A MathOptFormat Model"
@@ -9,14 +14,15 @@ include("nonlinear.jl")
 struct UnsupportedSet <: MOI.AbstractSet end
 struct UnsupportedFunction <: MOI.AbstractFunction end
 
-function test_model_equality(model_string, variables, constraints)
-    model = MOF.Model()
+function test_model_equality(
+        model_string, variables, constraints; kwargs...)
+    model = MOF.Model(; kwargs...)
     MOIU.loadfromstring!(model, model_string)
     MOI.write_to_file(model, TEST_MOF_FILE)
-    model_2 = MOF.Model()
+    model_2 = MOF.Model(; kwargs...)
     MOI.read_from_file(model_2, TEST_MOF_FILE)
     MOIU.test_models_equal(model, model_2, variables, constraints)
-    MOF.validate(TEST_MOF_FILE)
+    return
 end
 
 @testset "read_from_file" begin
@@ -368,6 +374,15 @@ end
             minobjective: x1
             c1: [t, x1, x2, x3, x4] in RootDetConeSquare(2)
         """, ["t", "x1", "x2", "x3", "x4"], ["c1"])
+    end
+    @testset "BSON" begin
+        test_model_equality("""
+            variables: x, y, z
+            minobjective: 2 * x + -1 * y * y + 1
+            c1: x in ZeroOne()
+            c2: y <= 2
+            c3: [x, y, z] in SecondOrderCone(3)
+        """, ["x", "y", "z"], ["c1", "c2", "c3"]; is_bson=true, validate=false)
     end
 
     # Clean up
