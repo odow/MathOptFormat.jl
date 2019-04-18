@@ -6,7 +6,11 @@ function MOI.read_from_file(model::Model, io::IO)
     if options.validate
         validate(io)
     end
-    object = JSON.parse(io; dicttype=Object)
+    object = if options.is_bson
+        Object(BSON.load(io))
+    else
+        JSON.parse(io; dicttype=Object)
+    end
     if object["version"] > VERSION
         error("Sorry, the file $(filename) can't be read because this library" *
               " supports version $(VERSION) of MathOptFormat, but the file " *

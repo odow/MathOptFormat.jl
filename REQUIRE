@@ -1,5 +1,6 @@
 julia 1
-DataStructures
-JSON
+BSON
 GZip
+JSON
 MathOptInterface 0.8-0.9
+OrderedCollections

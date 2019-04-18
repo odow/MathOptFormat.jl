@@ -1,7 +1,9 @@
 module MOF
 
 import ..MathOptFormat
-import DataStructures, JSON, JSONSchema, MathOptInterface
+import BSON, JSON, JSONSchema, MathOptInterface
+
+using OrderedCollections
 
 # The file /deps/deps.jl contains a constant `SCHEMA_PATH` that points to the
 # latest version of MathOptFormat, which should have been downloaded on `build`.
@@ -13,7 +15,7 @@ const VERSION = let data = JSON.parsefile(SCHEMA_PATH, use_mmap=false)
 end
 
 # we use an ordered dict to make the JSON printing nicer
-const Object = DataStructures.OrderedDict{String, Any}
+const Object = OrderedCollections.OrderedDict{String, Any}
 
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
@@ -46,6 +48,7 @@ const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 struct ModelOptions <: MOI.AbstractModelAttribute end
 
 struct Options
+    is_bson::Bool
     print_compact::Bool
     validate::Bool
     warn::Bool
@@ -58,6 +61,8 @@ Create an empty instance of MathOptFormat.Model.
 
 Keyword arguments are:
 
+ - `is_bson::Bool=false`: read and write the binary form of a JSON file.
+
  - `print_compact::Bool=false`: print the JSON file in a compact format without
    spaces or newlines.
 
@@ -67,9 +72,13 @@ Keyword arguments are:
  - `warn::Bool=false`: print a warning when variables or constraints are renamed
 """
 function Model(;
-        print_compact::Bool = false, validate::Bool = true, warn::Bool = false)
+        is_bson::Bool=false, print_compact::Bool=false,  validate::Bool=true,
+        warn::Bool=false)
     model = MOIU.UniversalFallback(InnerModel{Float64}())
-    MOI.set(model, ModelOptions(), Options(print_compact, validate, warn))
+    # TODO(odow): validate files if they are stored in BSON format.
+    validate = is_bson ? false : validate
+    MOI.set(model, ModelOptions(),
+            Options(is_bson, print_compact, validate, warn))
     return model
 end
 
@@ -100,6 +109,7 @@ function MOI.empty!(model::Model)
     MOI.set(model, ModelOptions(), options)
     return
 end
+
 function Base.show(io::IO, ::Model)
     print(io, "A MathOptFormat Model")
     return
