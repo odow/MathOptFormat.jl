@@ -1,0 +1,60 @@
+Compressed MathOptFormat files are, on average, 25\% larger than compressed  MPS
+files. This is due to a number of reasons. Two main reasons are:
+
+ 1) The ability of MPS to ignore bounds with 0.0 coefficients.
+
+    MathOptFormat assumes that unless specified, all variables are free
+    variables. Thus, a variable `x >= 0` requires a constraint:
+    ```
+    {
+      "function": {"head": "SingleVariable", "variable": "x"},
+      "set": {"head": "GreaterThan", "lower": 0.0}
+    }
+    ```
+    In contrast, MPS assumes that all variables have a lower bound of 0.0. Thus,
+    a variable `x >= 0` does not need any record in an MPS file.
+
+    This is also true for constraint bounds.
+
+ 2) The verbosity of MathOptFormat files.
+
+    To achieve generality, MathOptFormat files are verbose. For example, to
+    specify a problem with the objective function `min 2x`, MathOptFormat
+    requires
+    ```
+    {
+      "variables": [{"name": "x"}],
+      "objectives": [{
+        "sense": "min",
+        "function": {
+          "head": "ScalarAffineFunction",
+          "terms": [{"coefficient": 2.0, "variable": "x"}],
+          "constant": 0.0
+        }]
+    }
+    ```
+    In contrast, the MPS version of the same problem is
+    ```
+    NAME example
+    ROWS
+     N   obj
+    COLUMNS
+         x         obj       2
+    ENDATA
+    ```
+
+    However, much of the verbosity in MathOptFormat files is removed by
+    compression.
+
+Given these two factors, it is perhaps surprising that MathOptFormat files are
+only 25\% larger.
+
+The file with the smallest ratio of MathOptFomrat-to-MPS filesizes is `neos17`, where the MathOptFormat filesize is
+only 36\% of the MPS filesize. In absolute terms, the MPS version is 75 kb
+compressed (955 kb uncompressed), and the MathOptFormat version is 28 kb
+compressed (1046 kb uncompressed). As expected, the MathOptFormat version is
+larger in its uncompressed form. However, compared to the MPS file, the
+MathOptFormat file is particularly amenable to compression. This may be because
+the MPS file contains many elements with a zero coefficient.
+
+At the other end of the spectrum, the file with the largest ratio of MathOptFomat-to-MPS filesizes is `tbfp-network`, where the MathOptFormat filesize is 260\% larger than the MPS filesize. In absolute terms, the MPS version is 874 kb (12,354 kb uncompressed), and the MathOptFormat version is 2,298 kb (24,681 kb uncompressed). This may be because the model contains a very sparse constraint matrix. Each variable (column) appears in three constraints and the objective.
