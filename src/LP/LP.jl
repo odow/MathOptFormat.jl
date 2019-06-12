@@ -30,18 +30,18 @@ end
 """
     Model(; kwargs...)
 
-Create an empty instance of MathOptFormat.Model.
+Create an empty instance of MathOptFormat.LP.Model.
 
 Keyword arguments are:
 
  - `maximum_length::Int=255`: the maximum length for the name of a variable.
    lp_solve 5.0 allows only 16 characters, while CPLEX 12.5+ allow 255.
 
- - `warn::Bool=false`: print a warning when variables or constraints are renamed
+ - `warn::Bool=false`: print a warning when variables or constraints are renamed.
 
  - `warn_once::Bool=false`: print a warning when variables or constraints are
-   renamed, but only once per kind of replacement (e.g., once by illegal
-   character)
+   renamed, but only once per kind of replacement (e.g., once per illegal
+   character).
 """
 function Model(;
         maximum_length::Int=255, warn::Bool=false, warn_once::Bool=false)

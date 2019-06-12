@@ -40,11 +40,14 @@ const LP_TEST_FILE = "test.lp"
             "Binary\n" *
             "x\n" *
             "End\n"
+
+        MOI.empty!(model)
+        @test MOI.is_empty(model)
     end
 
     @testset "Name sanitisation" begin
         @testset "sanitized_name" begin
-            max_length = 255
+            max_length = 15
             o = LP.Options(max_length, true, false)
 
             @test LP.sanitized_name("x", o) == "x"
@@ -135,7 +138,7 @@ const LP_TEST_FILE = "test.lp"
         end
 
         @testset "Too long duplicate names after sanitization" begin
-            max_length = 255
+            max_length = 15
 
             model = LP.Model(maximum_length=max_length, warn=true)
             MOIU.loadfromstring!(model, """
