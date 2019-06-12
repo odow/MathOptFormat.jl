@@ -44,21 +44,27 @@ const LP_TEST_FILE = "test.lp"
 
     @testset "Name sanitisation" begin
         @testset "sanitized_name" begin
-            @test LP.sanitized_name("x") == "x"
-            @test LP.sanitized_name(repeat("x", LP.MAX_LENGTH)) == repeat("x", LP.MAX_LENGTH)
+            max_length = 255
 
-            too_long = repeat("x", LP.MAX_LENGTH + 1)
-            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long))). Truncating.") LP.sanitized_name(too_long)) == repeat("x", LP.MAX_LENGTH)
+            @test LP.sanitized_name("x", max_length) == "x"
+            @test LP.sanitized_name(repeat("x", max_length), max_length) == repeat("x", max_length)
 
-            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name(".x")) == "_.x"
-            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("0x")) == "_0x"
-            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("Ex")) == "_Ex"
-            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("ex")) == "_ex"
+            too_long = repeat("x", max_length + 1)
+            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long)); maximum: $(max_length)). Truncating.") LP.sanitized_name(too_long, max_length)) == repeat("x", max_length)
 
-            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds")) == "x_ds"
-            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.sanitized_name("x^")) == "x_"
-            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds[1]")) == "x_ds_1_"
-            @test (@test_logs (:warn, "Name Ex*ds[1] cannot start with a period, a number, e, or E. Prepending an underscore to name.") (:warn, "Name _Ex*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("Ex*ds[1]")) == "_Ex_ds_1_"
+            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name(".x", max_length)) == "_.x"
+            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("0x", max_length)) == "_0x"
+            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("Ex", max_length)) == "_Ex"
+            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("ex", max_length)) == "_ex"
+
+            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds", max_length)) == "x_ds"
+            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.sanitized_name("x^", max_length)) == "x_"
+            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds[1]", max_length)) == "x_ds_1_"
+            @test (@test_logs(
+                    (:warn, "Name Ex*ds[1] cannot start with a period, a number, e, or E. Prepending an underscore to name."),
+                    (:warn, "Name _Ex*ds[1] contains an illegal character: \"*\". Removing the offending character from name."),
+                    LP.sanitized_name("Ex*ds[1]", max_length))
+                ) == "_Ex_ds_1_"
         end
 
         @testset "Whole chain" begin
@@ -74,7 +80,7 @@ const LP_TEST_FILE = "test.lp"
         end
 
         @testset "Duplicate names after sanitization" begin
-            model = LP.Model()
+            model = LP.Model(warn=true)
             MOIU.loadfromstring!(model, """
             variables: a, b, c, d
             minobjective: a + b + c + d
@@ -96,7 +102,9 @@ const LP_TEST_FILE = "test.lp"
         end
 
         @testset "Too long duplicate names after sanitization" begin
-            model = LP.Model()
+            max_length = 255
+
+            model = LP.Model(maximum_length=max_length, warn=true)
             MOIU.loadfromstring!(model, """
             variables: a, b, c, d
             minobjective: a + b + c + d
@@ -104,22 +112,22 @@ const LP_TEST_FILE = "test.lp"
             """)
             MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[1], "a[")
             MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[2], "a]")
-            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[3], "a*" * repeat("x", LP.MAX_LENGTH + 1))
-            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[4], "a^" * repeat("x", LP.MAX_LENGTH + 1))
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[3], "a*" * repeat("x", max_length + 1))
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[4], "a^" * repeat("x", max_length + 1))
 
             @test_logs(
                 (:warn, "Name a[ contains an illegal character: \"[\". Removing the offending character from name."),
                 (:warn, "Name a] contains an illegal character: \"]\". Removing the offending character from name."),
-                (:warn, "Name a*$(repeat("x", LP.MAX_LENGTH + 1)) contains an illegal character: \"*\". Removing the offending character from name."),
-                (:warn, "Name a_$(repeat("x", LP.MAX_LENGTH + 1)) too long (length: $(2 + LP.MAX_LENGTH + 1)). Truncating."),
-                (:warn, "Name a^$(repeat("x", LP.MAX_LENGTH + 1)) contains an illegal character: \"^\". Removing the offending character from name."),
-                (:warn, "Name a_$(repeat("x", LP.MAX_LENGTH + 1)) too long (length: $(2 + LP.MAX_LENGTH + 1)). Truncating."),
+                (:warn, "Name a*$(repeat("x", max_length + 1)) contains an illegal character: \"*\". Removing the offending character from name."),
+                (:warn, "Name a_$(repeat("x", max_length + 1)) too long (length: $(2 + max_length + 1); maximum: $(max_length)). Truncating."),
+                (:warn, "Name a^$(repeat("x", max_length + 1)) contains an illegal character: \"^\". Removing the offending character from name."),
+                (:warn, "Name a_$(repeat("x", max_length + 1)) too long (length: $(2 + max_length + 1); maximum: $(max_length)). Truncating."),
                 MOI.write_to_file(model, LP_TEST_FILE))
             @test read(LP_TEST_FILE, String) ==
                 "minimize\n" *
-                "obj: 1 a_ + 1 a__1 + 1 a_$(repeat("x", LP.MAX_LENGTH - 2)) + 1 a_$(repeat("x", LP.MAX_LENGTH - 4))_1\n" *
+                "obj: 1 a_ + 1 a__1 + 1 a_$(repeat("x", max_length - 2)) + 1 a_$(repeat("x", max_length - 4))_1\n" *
                 "subject to\n" *
-                "c1: 1 a_ + 1 a__1 + 1 a_$(repeat("x", LP.MAX_LENGTH - 2)) + 1 a_$(repeat("x", LP.MAX_LENGTH - 4))_1 >= -1\n" *
+                "c1: 1 a_ + 1 a__1 + 1 a_$(repeat("x", max_length - 2)) + 1 a_$(repeat("x", max_length - 4))_1 >= -1\n" *
                 "Bounds\n" *
                 "End\n"
         end
