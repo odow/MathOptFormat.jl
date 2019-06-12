@@ -168,6 +168,52 @@ const LP_TEST_FILE = "test.lp"
                 "Bounds\n" *
                 "End\n"
         end
+
+        @testset "Many too long duplicate names after sanitization" begin
+            max_length = 6
+
+            model = LP.Model(maximum_length=max_length, warn=true)
+            MOIU.loadfromstring!(model, """
+            variables: a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r
+            minobjective: a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r
+            c1: a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r >= -1.0
+            """)
+            for i in 1:18
+                MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[i], repeat("x", max_length + 1))
+            end
+
+            @test_logs(
+                (:warn, "Name $(repeat("x", max_length + 1)) too long (length: $(1 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_1 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_2 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_3 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_4 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_5 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_6 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_7 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_8 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_9 too long (length: $(3 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_10 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_11 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_12 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_13 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_14 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_15 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_16 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                (:warn, "Name $(repeat("x", max_length + 1))_17 too long (length: $(4 + max_length); maximum: $(max_length)). Truncating."),
+                MOI.write_to_file(model, LP_TEST_FILE))
+
+            expr = "1 " * repeat("x", max_length) * " + " *
+                join(["1 " * repeat("x", max_length - 2) * "_" * string(i) for i in 1:9], " + ") * " + " *
+                join(["1 " * repeat("x", max_length - 3) * "_" * string(i) for i in 10:17], " + ")
+            @test read(LP_TEST_FILE, String) ==
+                "minimize\n" *
+                "obj: $(expr)\n" *
+                "subject to\n" *
+                "c1: $(expr) >= -1\n" *
+                "Bounds\n" *
+                "End\n"
+        end
     end
 
     @testset "other features" begin
