@@ -37,27 +37,12 @@ const MAX_LENGTH = 255
 const START_REG = r"^([\.0-9eE])"
 const NAME_REG = r"([^a-zA-Z0-9\!\"\#\$\%\&\(\)\/\,\.\;\?\@\_\`\'\{\}\|\~])"
 
-function verifyname(name::String)
-    if length(name) > MAX_LENGTH
-        return false
-    end
-    m = match(START_REG, name)
-    if m !== nothing
-        return false
-    end
-    m = match(NAME_REG, name)
-    if m !== nothing
-        return false
-    end
-    return true
-end
-
-function correctname(name::String)
+function sanitized_name(name::String)
     m = match(START_REG, name)
     if m !== nothing
         plural = length(m.match) > 1
         @warn("Name $(name) cannot start with a period, a number, e, or E. " *
-            "Prepending an underscore to name.")
+              "Prepending an underscore to name.")
         return correctname("_" * name)
     end
 
@@ -65,25 +50,22 @@ function correctname(name::String)
     if m !== nothing
         plural = length(m.match) > 1
         @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
-            "illegal character$(ifelse(plural, "s", "")): " *
-            "\"$(m.match)\". Removing the offending " *
-            "character$(ifelse(plural, "s", "")) from name.")
+              "illegal character$(ifelse(plural, "s", "")): " *
+              "\"$(m.match)\". Removing the offending " *
+              "character$(ifelse(plural, "s", "")) from name.")
         return correctname(replace(name, NAME_REG => s"_"))
     end
 
     # Truncate at the end to fit as many characters as possible.
     if length(name) > MAX_LENGTH
-        @warn("Name $(name) too long (length: $(length(name))). Truncating.", maxlog=1)
+        @warn("Name $(name) too long (length: $(length(name))). Truncating.")
         return correctname(String(name[1:MAX_LENGTH]))
     end
     return name
 end
 
 function write_function(io::IO, model::Model, func::MOI.SingleVariable)
-    name = MOI.get(model, MOI.VariableName(), func.variable)
-    if !verifyname(name)
-        name = correctname(name)
-    end
+    name = sanitized_name(MOI.get(model, MOI.VariableName(), func.variable))
     print(io, name)
     return
 end
@@ -104,10 +86,7 @@ function write_function(io::IO, model::Model, func::MOI.ScalarAffineFunction{Flo
                 Base.Grisu.print_shortest(io, abs(term.coefficient))
             end
 
-            varname = MOI.get(model, MOI.VariableName(), term.variable_index)
-            if !verifyname(varname)
-                varname = correctname(varname)
-            end
+            varname = sanitized_name(MOI.get(model, MOI.VariableName(), term.variable_index))
             print(io, " ", varname)
         end
     end
