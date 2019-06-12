@@ -165,8 +165,23 @@ end
 function MOI.write_to_file(model::Model, io::IO)
     MathOptFormat.create_unique_names(model)
     sanitized_names = Dict{MOI.VariableIndex, String}()
+    sanitized_names_set = Set{String}()
     for v in MOI.get(model, MOI.ListOfVariableIndices())
-        sanitized_names[v] = sanitized_name(MOI.get(model, MOI.VariableName(), v))
+        proposed_sanitized_name = sanitized_name(MOI.get(model, MOI.VariableName(), v))
+
+        # In case of duplicate names after sanitization, add a number at the end.
+        # TODO: ensure the maximum length constraint is still satisfied.
+        if proposed_sanitized_name in sanitized_names_set
+            proposed_sanitized_name *= '_'
+            i = 1
+            while proposed_sanitized_name * string(i) in sanitized_names_set
+                i += 1
+            end
+            proposed_sanitized_name *= string(i)
+        end
+
+        push!(sanitized_names_set, proposed_sanitized_name)
+        sanitized_names[v] = proposed_sanitized_name
     end
 
     write_sense(io, model)

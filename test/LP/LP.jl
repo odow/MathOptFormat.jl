@@ -72,6 +72,28 @@ const LP_TEST_FILE = "test.lp"
 
             @test_logs (:warn, "Name a[] contains an illegal character: \"[\". Removing the offending character from name.") MOI.write_to_file(model, LP_TEST_FILE)
         end
+
+        @testset "Duplicate names after sanitization" begin
+            model = LP.Model()
+            MOIU.loadfromstring!(model, """
+            variables: a, b, c, d
+            minobjective: a + b + c + d
+            c1: a + b + c + d >= -1.0
+            """)
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[1], "a[")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[2], "a]")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[3], "a*")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[4], "a^")
+
+            @test_logs (:warn, "Name a[ contains an illegal character: \"[\". Removing the offending character from name.") (:warn, "Name a] contains an illegal character: \"]\". Removing the offending character from name.") (:warn, "Name a* contains an illegal character: \"*\". Removing the offending character from name.") (:warn, "Name a^ contains an illegal character: \"^\". Removing the offending character from name.") MOI.write_to_file(model, LP_TEST_FILE)
+            @test read(LP_TEST_FILE, String) ==
+                "minimize\n" *
+                "obj: 1 a_ + 1 a__1 + 1 a__2 + 1 a__3\n" *
+                "subject to\n" *
+                "c1: 1 a_ + 1 a__1 + 1 a__2 + 1 a__3 >= -1\n" *
+                "Bounds\n" *
+                "End\n"
+        end
     end
 
     @testset "other features" begin
