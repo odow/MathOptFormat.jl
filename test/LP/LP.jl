@@ -41,6 +41,7 @@ const LP_TEST_FILE = "test.lp"
             "x\n" *
             "End\n"
 
+        @test !MOI.is_empty(model)
         MOI.empty!(model)
         @test MOI.is_empty(model)
     end
