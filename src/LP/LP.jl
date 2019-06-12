@@ -93,30 +93,43 @@ end
 const START_REG = r"^([\.0-9eE])"
 const NAME_REG = r"([^a-zA-Z0-9\!\"\#\$\%\&\(\)\/\,\.\;\?\@\_\`\'\{\}\|\~])"
 
-function sanitized_name(name::String, max_length::Int)
+warned_start = nothing
+warned_illegal = nothing
+
+function sanitized_name(name::String, options::Options)
     m = match(START_REG, name)
     if m !== nothing
         plural = length(m.match) > 1
-        @warn("Name $(name) cannot start with a period, a number, e, or E. " *
-              "Prepending an underscore to name.")
-        return sanitized_name("_" * name, max_length)
+
+        if options.warn || (options.warn_once && !(m.match[1] in warned_start))
+            @warn("Name $(name) cannot start with a period, a number, e, or E. " *
+                  "Prepending an underscore to name.")
+            push!(warned_start, m.match[1])
+        end
+
+        return sanitized_name("_" * name, options)
     end
 
     m = match(NAME_REG, name)
     if m !== nothing
         plural = length(m.match) > 1
-        @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
-              "illegal character$(ifelse(plural, "s", "")): " *
-              "\"$(m.match)\". Removing the offending " *
-              "character$(ifelse(plural, "s", "")) from name.")
-        return sanitized_name(replace(name, NAME_REG => s"_"), max_length)
+
+        if options.warn || (options.warn_once && !(m.match[1] in warned_illegal))
+            @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
+                  "illegal character$(ifelse(plural, "s", "")): " *
+                  "\"$(m.match)\". Removing the offending " *
+                  "character$(ifelse(plural, "s", "")) from name.")
+            push!(warned_illegal, m.match[1])
+        end
+
+        return sanitized_name(replace(name, NAME_REG => s"_"), options)
     end
 
     # Truncate at the end to fit as many characters as possible.
-    if length(name) > max_length
+    if length(name) > options.maximum_length
         @warn("Name $(name) too long (length: $(length(name)); " *
-              "maximum: $(max_length)). Truncating.")
-        return sanitized_name(String(name[1:max_length]), max_length)
+              "maximum: $(options.maximum_length)). Truncating.")
+        return sanitized_name(String(name[1:options.maximum_length]), options)
     end
 
     return name
@@ -220,12 +233,20 @@ function write_objective(io::IO, model::Model, sanitized_names::Dict{MOI.Variabl
 end
 
 function MOI.write_to_file(model::Model, io::IO)
+    # Reset the global variables about warnings.
+    global warned_start
+    warned_start = Set{Char}()
+    global warned_illegal
+    warned_illegal = Set{Char}()
+
+    # Ensure each variable has a unique name that does not infringe LP constraints.
     MathOptFormat.create_unique_names(model)
     sanitized_names = Dict{MOI.VariableIndex, String}()
     sanitized_names_set = Set{String}()
     for v in MOI.get(model, MOI.ListOfVariableIndices())
-        max_length = MOI.get(model, ModelOptions()).maximum_length
-        proposed_sanitized_name = sanitized_name(MOI.get(model, MOI.VariableName(), v), max_length)
+        options = MOI.get(model, ModelOptions())
+        max_length = options.maximum_length
+        proposed_sanitized_name = sanitized_name(MOI.get(model, MOI.VariableName(), v), options)
 
         # In case of duplicate names after sanitization, add a number at the end.
         if proposed_sanitized_name in sanitized_names_set

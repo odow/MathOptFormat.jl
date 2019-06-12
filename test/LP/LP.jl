@@ -45,36 +45,69 @@ const LP_TEST_FILE = "test.lp"
     @testset "Name sanitisation" begin
         @testset "sanitized_name" begin
             max_length = 255
+            o = LP.Options(max_length, true, false)
 
-            @test LP.sanitized_name("x", max_length) == "x"
-            @test LP.sanitized_name(repeat("x", max_length), max_length) == repeat("x", max_length)
+            @test LP.sanitized_name("x", o) == "x"
+            @test LP.sanitized_name(repeat("x", max_length), o) == repeat("x", max_length)
 
             too_long = repeat("x", max_length + 1)
-            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long)); maximum: $(max_length)). Truncating.") LP.sanitized_name(too_long, max_length)) == repeat("x", max_length)
+            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long)); maximum: $(max_length)). Truncating.") LP.sanitized_name(too_long, o)) == repeat("x", max_length)
 
-            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name(".x", max_length)) == "_.x"
-            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("0x", max_length)) == "_0x"
-            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("Ex", max_length)) == "_Ex"
-            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("ex", max_length)) == "_ex"
+            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name(".x", o)) == "_.x"
+            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("0x", o)) == "_0x"
+            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("Ex", o)) == "_Ex"
+            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("ex", o)) == "_ex"
 
-            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds", max_length)) == "x_ds"
-            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.sanitized_name("x^", max_length)) == "x_"
-            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds[1]", max_length)) == "x_ds_1_"
+            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds", o)) == "x_ds"
+            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.sanitized_name("x^", o)) == "x_"
+            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds[1]", o)) == "x_ds_1_"
             @test (@test_logs(
                     (:warn, "Name Ex*ds[1] cannot start with a period, a number, e, or E. Prepending an underscore to name."),
                     (:warn, "Name _Ex*ds[1] contains an illegal character: \"*\". Removing the offending character from name."),
-                    LP.sanitized_name("Ex*ds[1]", max_length))
+                    LP.sanitized_name("Ex*ds[1]", o))
                 ) == "_Ex_ds_1_"
         end
 
         @testset "Whole chain" begin
-            model = LP.Model()
+            model = LP.Model(warn=true)
             MOIU.loadfromstring!(model, """
             variables: a
             minobjective: a
             c1: a >= -1.0
             """)
             MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[1], "a[]")
+
+            @test_logs (:warn, "Name a[] contains an illegal character: \"[\". Removing the offending character from name.") MOI.write_to_file(model, LP_TEST_FILE)
+        end
+
+        @testset "Warn multiple times" begin
+            model = LP.Model(warn=true)
+            MOIU.loadfromstring!(model, """
+            variables: a, b, c
+            minobjective: a + b + c
+            c1: a + b + c >= -1.0
+            """)
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[1], "a[]")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[2], "b[]")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[3], "c[]")
+
+            @test_logs(
+                (:warn, "Name a[] contains an illegal character: \"[\". Removing the offending character from name."),
+                (:warn, "Name b[] contains an illegal character: \"[\". Removing the offending character from name."),
+                (:warn, "Name c[] contains an illegal character: \"[\". Removing the offending character from name."),
+                MOI.write_to_file(model, LP_TEST_FILE))
+        end
+
+        @testset "Warn once" begin
+            model = LP.Model(warn_once=true)
+            MOIU.loadfromstring!(model, """
+            variables: a, b, c
+            minobjective: a + b + c
+            c1: a + b + c >= -1.0
+            """)
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[1], "a[]")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[2], "b[]")
+            MOI.set(model, MOI.VariableName(), MOI.get(model, MOI.ListOfVariableIndices())[3], "c[]")
 
             @test_logs (:warn, "Name a[] contains an illegal character: \"[\". Removing the offending character from name.") MOI.write_to_file(model, LP_TEST_FILE)
         end
