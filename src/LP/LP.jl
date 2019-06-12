@@ -170,14 +170,23 @@ function MOI.write_to_file(model::Model, io::IO)
         proposed_sanitized_name = sanitized_name(MOI.get(model, MOI.VariableName(), v))
 
         # In case of duplicate names after sanitization, add a number at the end.
-        # TODO: ensure the maximum length constraint is still satisfied.
         if proposed_sanitized_name in sanitized_names_set
-            proposed_sanitized_name *= '_'
-            i = 1
-            while proposed_sanitized_name * string(i) in sanitized_names_set
-                i += 1
+            # If the name is already too long, make some space for the suffix.
+            if length(proposed_sanitized_name) >= MAX_LENGTH
+                proposed_sanitized_name = String(proposed_sanitized_name[1:MAX_LENGTH - 2])
             end
-            proposed_sanitized_name *= string(i)
+
+            i = 1
+            while proposed_sanitized_name * '_' * string(i) in sanitized_names_set
+                i += 1
+
+                # If the maximum length constraint would be broken with the *next* i,
+                # truncate a bit more the proposed_sanitized_name.
+                if length(proposed_sanitized_name * '_' * string(i)) > MAX_LENGTH
+                    proposed_sanitized_name = String(proposed_sanitized_name[1:length(proposed_sanitized_name) - 1])
+                end
+            end
+            proposed_sanitized_name *= '_' * string(i)
         end
 
         push!(sanitized_names_set, proposed_sanitized_name)
