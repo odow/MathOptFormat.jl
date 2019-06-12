@@ -48,7 +48,7 @@ const LP_TEST_FILE = "test.lp"
     @testset "Name sanitisation" begin
         @testset "sanitized_name" begin
             max_length = 15
-            o = LP.Options(max_length, true, false)
+            o = LP.Options(max_length, true, false, Set{Char}(), Set{Char}())
 
             @test LP.sanitized_name("x", o) == "x"
             @test LP.sanitized_name(repeat("x", max_length), o) == repeat("x", max_length)

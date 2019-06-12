@@ -25,6 +25,8 @@ struct Options
     maximum_length::Int
     warn::Bool
     warn_once::Bool
+    warned_start::Set{Char}
+    warned_illegal::Set{Char}
 end
 
 """
@@ -46,7 +48,8 @@ Keyword arguments are:
 function Model(;
         maximum_length::Int=255, warn::Bool=false, warn_once::Bool=false)
     model = MOIU.UniversalFallback(InnerLPModel{Float64}())
-    MOI.set(model, ModelOptions(), Options(maximum_length, warn, warn_once))
+    options = Options(maximum_length, warn, warn_once, Set{Char}(), Set{Char}())
+    MOI.set(model, ModelOptions(), options)
     return model
 end
 
@@ -93,18 +96,15 @@ end
 const START_REG = r"^([\.0-9eE])"
 const NAME_REG = r"([^a-zA-Z0-9\!\"\#\$\%\&\(\)\/\,\.\;\?\@\_\`\'\{\}\|\~])"
 
-warned_start = nothing
-warned_illegal = nothing
-
 function sanitized_name(name::String, options::Options)
     m = match(START_REG, name)
     if m !== nothing
         plural = length(m.match) > 1
 
-        if options.warn || (options.warn_once && !(m.match[1] in warned_start))
+        if options.warn || (options.warn_once && !(m.match[1] in options.warned_start))
             @warn("Name $(name) cannot start with a period, a number, e, or E. " *
                   "Prepending an underscore to name.")
-            push!(warned_start, m.match[1])
+            push!(options.warned_start, m.match[1])
         end
 
         return sanitized_name("_" * name, options)
@@ -114,12 +114,12 @@ function sanitized_name(name::String, options::Options)
     if m !== nothing
         plural = length(m.match) > 1
 
-        if options.warn || (options.warn_once && !(m.match[1] in warned_illegal))
+        if options.warn || (options.warn_once && !(m.match[1] in options.warned_illegal))
             @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
                   "illegal character$(ifelse(plural, "s", "")): " *
                   "\"$(m.match)\". Removing the offending " *
                   "character$(ifelse(plural, "s", "")) from name.")
-            push!(warned_illegal, m.match[1])
+            push!(options.warned_illegal, m.match[1])
         end
 
         return sanitized_name(replace(name, NAME_REG => s"_"), options)
@@ -233,12 +233,6 @@ function write_objective(io::IO, model::Model, sanitized_names::Dict{MOI.Variabl
 end
 
 function MOI.write_to_file(model::Model, io::IO)
-    # Reset the global variables about warnings.
-    global warned_start
-    warned_start = Set{Char}()
-    global warned_illegal
-    warned_illegal = Set{Char}()
-
     # Ensure each variable has a unique name that does not infringe LP constraints.
     MathOptFormat.create_unique_names(model)
     sanitized_names = Dict{MOI.VariableIndex, String}()
