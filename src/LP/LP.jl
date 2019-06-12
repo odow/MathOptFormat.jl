@@ -57,9 +57,8 @@ function correctname(name::String)
     if m !== nothing
         plural = length(m.match) > 1
         @warn("Name $(name) cannot start with a period, a number, e, or E. " *
-            "Removing the offending character$(ifelse(plural, "s", "")) " *
-            "from name.", maxlog=1)
-        return correctname(replace(name, START_REG => s"_"))
+            "Prepending an underscore to name.")
+        return correctname("_" * name)
     end
 
     m = match(NAME_REG, name)
@@ -68,14 +67,14 @@ function correctname(name::String)
         @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
             "illegal character$(ifelse(plural, "s", "")): " *
             "\"$(m.match)\". Removing the offending " *
-            "character$(ifelse(plural, "s", "")) from name.", maxlog=1)
+            "character$(ifelse(plural, "s", "")) from name.")
         return correctname(replace(name, NAME_REG => s"_"))
     end
 
     # Truncate at the end to fit as many characters as possible.
     if length(name) > MAX_LENGTH
         @warn("Name $(name) too long (length: $(length(name))). Truncating.", maxlog=1)
-        return correctname(String(name[1:16]))
+        return correctname(String(name[1:MAX_LENGTH]))
     end
     return name
 end
