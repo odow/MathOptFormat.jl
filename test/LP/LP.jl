@@ -43,36 +43,22 @@ const LP_TEST_FILE = "test.lp"
     end
 
     @testset "Name sanitisation" begin
-        @testset "verifyname" begin
-            @test LP.verifyname("x")
-            @test LP.verifyname(repeat("x", LP.MAX_LENGTH))
-
-            @test LP.verifyname(repeat("x", LP.MAX_LENGTH + 1)) == false
-            @test LP.verifyname(".x") == false
-            @test LP.verifyname("0x") == false
-            @test LP.verifyname("exe") == false
-            @test LP.verifyname("ExE") == false
-
-            @test LP.verifyname("x^") == false
-            @test LP.verifyname("x*ds") == false
-        end
-
-        @testset "correctname" begin
-            @test LP.correctname("x") == "x"
-            @test LP.correctname(repeat("x", LP.MAX_LENGTH)) == repeat("x", LP.MAX_LENGTH)
+        @testset "sanitized_name" begin
+            @test LP.sanitized_name("x") == "x"
+            @test LP.sanitized_name(repeat("x", LP.MAX_LENGTH)) == repeat("x", LP.MAX_LENGTH)
 
             too_long = repeat("x", LP.MAX_LENGTH + 1)
-            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long))). Truncating.") LP.correctname(too_long)) == repeat("x", LP.MAX_LENGTH)
+            @test (@test_logs (:warn, "Name $(too_long) too long (length: $(length(too_long))). Truncating.") LP.sanitized_name(too_long)) == repeat("x", LP.MAX_LENGTH)
 
-            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.correctname(".x")) == "_.x"
-            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.correctname("0x")) == "_0x"
-            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.correctname("Ex")) == "_Ex"
-            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.correctname("ex")) == "_ex"
+            @test (@test_logs (:warn, "Name .x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name(".x")) == "_.x"
+            @test (@test_logs (:warn, "Name 0x cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("0x")) == "_0x"
+            @test (@test_logs (:warn, "Name Ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("Ex")) == "_Ex"
+            @test (@test_logs (:warn, "Name ex cannot start with a period, a number, e, or E. Prepending an underscore to name.") LP.sanitized_name("ex")) == "_ex"
 
-            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.correctname("x*ds")) == "x_ds"
-            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.correctname("x^")) == "x_"
-            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.correctname("x*ds[1]")) == "x_ds_1_"
-            @test (@test_logs (:warn, "Name Ex*ds[1] cannot start with a period, a number, e, or E. Prepending an underscore to name.") (:warn, "Name _Ex*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.correctname("Ex*ds[1]")) == "_Ex_ds_1_"
+            @test (@test_logs (:warn, "Name x*ds contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds")) == "x_ds"
+            @test (@test_logs (:warn, "Name x^ contains an illegal character: \"^\". Removing the offending character from name.") LP.sanitized_name("x^")) == "x_"
+            @test (@test_logs (:warn, "Name x*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("x*ds[1]")) == "x_ds_1_"
+            @test (@test_logs (:warn, "Name Ex*ds[1] cannot start with a period, a number, e, or E. Prepending an underscore to name.") (:warn, "Name _Ex*ds[1] contains an illegal character: \"*\". Removing the offending character from name.") LP.sanitized_name("Ex*ds[1]")) == "_Ex_ds_1_"
         end
 
         @testset "Whole chain" begin

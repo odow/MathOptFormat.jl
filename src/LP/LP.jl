@@ -37,31 +37,41 @@ const MAX_LENGTH = 255
 const START_REG = r"^([\.0-9eE])"
 const NAME_REG = r"([^a-zA-Z0-9\!\"\#\$\%\&\(\)\/\,\.\;\?\@\_\`\'\{\}\|\~])"
 
-function sanitized_name(name::String)
-    m = match(START_REG, name)
-    if m !== nothing
-        plural = length(m.match) > 1
-        @warn("Name $(name) cannot start with a period, a number, e, or E. " *
-              "Prepending an underscore to name.")
-        return correctname("_" * name)
-    end
+let variable_name_cache = Dict{String, String}()
+    global sanitized_name
+    function sanitized_name(name::String)
+        if name in keys(variable_name_cache)
+            return variable_name_cache[name]
+        end
+        varname = name
 
-    m = match(NAME_REG, name)
-    if m !== nothing
-        plural = length(m.match) > 1
-        @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
-              "illegal character$(ifelse(plural, "s", "")): " *
-              "\"$(m.match)\". Removing the offending " *
-              "character$(ifelse(plural, "s", "")) from name.")
-        return correctname(replace(name, NAME_REG => s"_"))
-    end
+        m = match(START_REG, name)
+        if m !== nothing
+            plural = length(m.match) > 1
+            @warn("Name $(name) cannot start with a period, a number, e, or E. " *
+                  "Prepending an underscore to name.")
+            return sanitized_name("_" * name)
+        end
 
-    # Truncate at the end to fit as many characters as possible.
-    if length(name) > MAX_LENGTH
-        @warn("Name $(name) too long (length: $(length(name))). Truncating.")
-        return correctname(String(name[1:MAX_LENGTH]))
+        m = match(NAME_REG, name)
+        if m !== nothing
+            plural = length(m.match) > 1
+            @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
+                  "illegal character$(ifelse(plural, "s", "")): " *
+                  "\"$(m.match)\". Removing the offending " *
+                  "character$(ifelse(plural, "s", "")) from name.")
+            return sanitized_name(replace(name, NAME_REG => s"_"))
+        end
+
+        # Truncate at the end to fit as many characters as possible.
+        if length(name) > MAX_LENGTH
+            @warn("Name $(name) too long (length: $(length(name))). Truncating.")
+            return sanitized_name(String(name[1:MAX_LENGTH]))
+        end
+
+        variable_name_cache[varname] = name
+        return name
     end
-    return name
 end
 
 function write_function(io::IO, model::Model, func::MOI.SingleVariable)
