@@ -37,50 +37,40 @@ const MAX_LENGTH = 255
 const START_REG = r"^([\.0-9eE])"
 const NAME_REG = r"([^a-zA-Z0-9\!\"\#\$\%\&\(\)\/\,\.\;\?\@\_\`\'\{\}\|\~])"
 
-let variable_name_cache = Dict{String, String}()
-    global sanitized_name
-    function sanitized_name(name::String)
-        if name in keys(variable_name_cache)
-            return variable_name_cache[name]
-        end
-        varname = name
-
-        m = match(START_REG, name)
-        if m !== nothing
-            plural = length(m.match) > 1
-            @warn("Name $(name) cannot start with a period, a number, e, or E. " *
-                  "Prepending an underscore to name.")
-            return sanitized_name("_" * name)
-        end
-
-        m = match(NAME_REG, name)
-        if m !== nothing
-            plural = length(m.match) > 1
-            @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
-                  "illegal character$(ifelse(plural, "s", "")): " *
-                  "\"$(m.match)\". Removing the offending " *
-                  "character$(ifelse(plural, "s", "")) from name.")
-            return sanitized_name(replace(name, NAME_REG => s"_"))
-        end
-
-        # Truncate at the end to fit as many characters as possible.
-        if length(name) > MAX_LENGTH
-            @warn("Name $(name) too long (length: $(length(name))). Truncating.")
-            return sanitized_name(String(name[1:MAX_LENGTH]))
-        end
-
-        variable_name_cache[varname] = name
-        return name
+function sanitized_name(name::String)
+    m = match(START_REG, name)
+    if m !== nothing
+        plural = length(m.match) > 1
+        @warn("Name $(name) cannot start with a period, a number, e, or E. " *
+              "Prepending an underscore to name.")
+        return sanitized_name("_" * name)
     end
+
+    m = match(NAME_REG, name)
+    if m !== nothing
+        plural = length(m.match) > 1
+        @warn("Name $(name) contains $(ifelse(plural, "", "an "))" *
+              "illegal character$(ifelse(plural, "s", "")): " *
+              "\"$(m.match)\". Removing the offending " *
+              "character$(ifelse(plural, "s", "")) from name.")
+        return sanitized_name(replace(name, NAME_REG => s"_"))
+    end
+
+    # Truncate at the end to fit as many characters as possible.
+    if length(name) > MAX_LENGTH
+        @warn("Name $(name) too long (length: $(length(name))). Truncating.")
+        return sanitized_name(String(name[1:MAX_LENGTH]))
+    end
+
+    return name
 end
 
-function write_function(io::IO, model::Model, func::MOI.SingleVariable)
-    name = sanitized_name(MOI.get(model, MOI.VariableName(), func.variable))
-    print(io, name)
+function write_function(io::IO, model::Model, func::MOI.SingleVariable, sanitized_names::Dict{MOI.VariableIndex, String})
+    print(io, sanitized_names[func.variable])
     return
 end
 
-function write_function(io::IO, model::Model, func::MOI.ScalarAffineFunction{Float64})
+function write_function(io::IO, model::Model, func::MOI.ScalarAffineFunction{Float64}, sanitized_names::Dict{MOI.VariableIndex, String})
     is_first_item = true
     if !(func.constant ≈ 0.0)
         Base.Grisu.print_shortest(io, func.constant)
@@ -96,8 +86,7 @@ function write_function(io::IO, model::Model, func::MOI.ScalarAffineFunction{Flo
                 Base.Grisu.print_shortest(io, abs(term.coefficient))
             end
 
-            varname = sanitized_name(MOI.get(model, MOI.VariableName(), term.variable_index))
-            print(io, " ", varname)
+            print(io, " ", sanitized_names[term.variable_index])
         end
     end
     return
@@ -139,14 +128,14 @@ end
 
 write_constraint_prefix(io::IO, set) = nothing
 
-function write_constraint(io::IO, model::Model, index; write_name::Bool = true)
+function write_constraint(io::IO, model::Model, index, sanitized_names::Dict{MOI.VariableIndex, String}; write_name::Bool = true)
     func = MOI.get(model, MOI.ConstraintFunction(), index)
     set = MOI.get(model, MOI.ConstraintSet(), index)
     if write_name
         print(io, MOI.get(model, MOI.ConstraintName(), index), ": ")
     end
     write_constraint_prefix(io, set)
-    write_function(io, model, func)
+    write_function(io, model, func, sanitized_names)
     write_constraint_suffix(io, set)
 end
 
@@ -164,30 +153,35 @@ function write_sense(io::IO, model::Model)
     return
 end
 
-function write_objective(io::IO, model::Model)
+function write_objective(io::IO, model::Model, sanitized_names::Dict{MOI.VariableIndex, String})
     print(io, "obj: ")
     obj_func_type = MOI.get(model, MOI.ObjectiveFunctionType())
     obj_func = MOI.get(model, MOI.ObjectiveFunction{obj_func_type}())
-    write_function(io, model, obj_func)
+    write_function(io, model, obj_func, sanitized_names)
     println(io)
     return
 end
 
 function MOI.write_to_file(model::Model, io::IO)
     MathOptFormat.create_unique_names(model)
+    sanitized_names = Dict{MOI.VariableIndex, String}()
+    for v in MOI.get(model, MOI.ListOfVariableIndices())
+        sanitized_names[v] = sanitized_name(MOI.get(model, MOI.VariableName(), v))
+    end
+
     write_sense(io, model)
-    write_objective(io, model)
+    write_objective(io, model, sanitized_names)
     println(io, "subject to")
     for S in SCALAR_SETS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Float64}, S}())
-            write_constraint(io, model, index; write_name = true)
+            write_constraint(io, model, index, sanitized_names; write_name = true)
         end
     end
 
     println(io, "Bounds")
     for S in SCALAR_SETS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, S}())
-            write_constraint(io, model, index; write_name = false)
+            write_constraint(io, model, index, sanitized_names; write_name = false)
         end
     end
 
@@ -196,7 +190,7 @@ function MOI.write_to_file(model::Model, io::IO)
         if length(indices) > 0
             println(io, str_S)
             for index in indices
-                write_function(io, model, MOI.get(model, MOI.ConstraintFunction(), index))
+                write_function(io, model, MOI.get(model, MOI.ConstraintFunction(), index), sanitized_names)
                 println(io)
             end
         end
