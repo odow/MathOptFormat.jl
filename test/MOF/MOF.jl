@@ -369,6 +369,21 @@ end
             c1: [t, x1, x2, x3, x4] in RootDetConeSquare(2)
         """, ["t", "x1", "x2", "x3", "x4"], ["c1"])
     end
+    @testset "IndicatorSet" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in IndicatorSet{ACTIVATE_ON_ONE}(GreaterThan(1.0))
+            c2: x >= 0.0
+        """, ["x", "y"], ["c1", "c2"])
+
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in IndicatorSet{ACTIVATE_ON_ZERO}(GreaterThan(1.0))
+            c2: x >= 0.0
+        """, ["x", "y"], ["c1", "c2"])
+    end
 
     # Clean up
     sleep(1.0)  # allow time for unlink to happen

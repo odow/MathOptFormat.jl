@@ -223,7 +223,7 @@ end
 
 # ========== Default fallback ==========
 """
-    set_to_moi(x::OrderedDict, model::Model)
+    set_to_moi(x::OrderedDict, model::Model, name_map::Dict{String, MOI.VariableIndex})
 
 Convert `x` from an OrderedDict representation into a MOI representation.
 """
@@ -267,6 +267,19 @@ function set_to_moi(::Val{:SOS2}, object::Object, model::Model,
     return MOI.SOS2(Float64.(object["weights"]))
 end
 
+function set_to_moi(
+    ::Val{:IndicatorSet}, object::Object, model::Model,
+    name_map::Dict{String, MOI.VariableIndex}
+)
+    set = set_to_moi(object["set"], model, name_map)
+    indicator = if object["activate_on"] == "one"
+        MOI.ACTIVATE_ON_ONE
+    else
+        @assert object["activate_on"] == "zero"
+        MOI.ACTIVATE_ON_ZERO
+    end
+    return MOI.IndicatorSet{indicator}(set)
+end
 
 # ========== Non-typed scalar sets ==========
 set_info(::Type{Val{:ZeroOne}}) = (MOI.ZeroOne,)

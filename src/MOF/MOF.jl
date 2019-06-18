@@ -35,11 +35,13 @@ MOIU.@model(InnerModel,
         MOI.PositiveSemidefiniteConeTriangle, MOI.PositiveSemidefiniteConeSquare,
         MOI.ExponentialCone, MOI.DualExponentialCone),
     (MOI.PowerCone, MOI.DualPowerCone, MOI.SOS1, MOI.SOS2),
-    (MOI.SingleVariable, Nonlinear),
+    (Nonlinear,),
     (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
     (MOI.VectorOfVariables,),
     (MOI.VectorAffineFunction, MOI.VectorQuadraticFunction)
 )
+
+# IndicatorSet is handled by UniversalFallback.
 
 const Model = MOIU.UniversalFallback{InnerModel{Float64}}
 

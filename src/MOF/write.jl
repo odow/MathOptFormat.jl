@@ -253,3 +253,15 @@ head_name(::Type{<:MOI.PowerCone}) = "PowerCone"
 head_name(::Type{<:MOI.DualPowerCone}) = "DualPowerCone"
 head_name(::Type{<:MOI.SOS1}) = "SOS1"
 head_name(::Type{<:MOI.SOS2}) = "SOS2"
+
+function moi_to_object(
+    set::MOI.IndicatorSet{I, S}, model::Model,
+    name_map::Dict{MOI.VariableIndex, String}
+) where {I, S}
+    @assert I == MOI.ACTIVATE_ON_ONE || I == MOI.ACTIVATE_ON_ZERO
+    return Object(
+        "head" => "IndicatorSet",
+        "set" => moi_to_object(set.set, model, name_map),
+        "activate_on" => (I == MOI.ACTIVATE_ON_ONE) ? "one" : "zero"
+    )
+end

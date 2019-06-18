@@ -11,7 +11,7 @@ MOIU.@model(InnerModel,
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
     (),
     (),
-    (MOI.SingleVariable,),
+    (),
     (MOI.ScalarAffineFunction,),
     (),
     ()

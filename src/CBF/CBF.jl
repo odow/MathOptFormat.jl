@@ -14,7 +14,7 @@ MOIU.@model(InnerModel,
         MOI.PositiveSemidefiniteConeTriangle,
         MOI.ExponentialCone, MOI.DualExponentialCone),
     (MOI.PowerCone, MOI.DualPowerCone),
-    (MOI.SingleVariable,),
+    (),
     (MOI.ScalarAffineFunction,),
     (MOI.VectorOfVariables,),
     (MOI.VectorAffineFunction,)
