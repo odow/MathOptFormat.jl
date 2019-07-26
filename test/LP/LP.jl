@@ -231,6 +231,20 @@ const LP_TEST_FILE = "test.lp"
                 "Bounds\n" *
                 "End\n"
         end
+
+        @testset "Constraint name sanitization" begin
+            model = LP.Model(warn=true)
+            MOIU.loadfromstring!(model, """
+            variables: a, b, c
+            minobjective: a + b + c
+            c1: a + b + c >= -1.0
+            """)
+            MOI.set(model, MOI.ConstraintName(), MOI.get(model, MOI.ListOfConstraintIndices())[1], "c1[]")
+
+            @test_logs(
+                (:warn, "Name c1[] contains an illegal character: \"[\". Removing the offending character from name."),
+                MOI.write_to_file(model, LP_TEST_FILE))
+        end
     end
 
     @testset "other features" begin
