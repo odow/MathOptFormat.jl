@@ -109,6 +109,39 @@ function sanitized_name(name::String, options::Options)
     return name
 end
 
+function sanitized_name_set(names::Dict{V, String}, options::Options) where V
+    max_length = options.maximum_length
+    sanitized_names = Dict{V, String}()
+    sanitized_names_set = Set{String}()
+
+    for (id, name) in names
+        proposed_sanitized_name = sanitized_name(name, options)
+
+        # In case of duplicate names after sanitization, add a number at the end.
+        if proposed_sanitized_name in sanitized_names_set
+            # If the name is already too long, make some space for the suffix.
+            if length(proposed_sanitized_name) >= max_length
+                proposed_sanitized_name = String(proposed_sanitized_name[1:max_length - 2])
+            end
+            i = 1
+            while proposed_sanitized_name * '_' * string(i) in sanitized_names_set
+                i += 1
+
+                # If the maximum length constraint would be broken with the *next* i,
+                # truncate a bit more the proposed_sanitized_name.
+                if length(proposed_sanitized_name * '_' * string(i)) > max_length
+                    proposed_sanitized_name = String(proposed_sanitized_name[1:length(proposed_sanitized_name) - 1])
+                end
+            end
+            proposed_sanitized_name *= '_' * string(i)
+        end
+        push!(sanitized_names_set, proposed_sanitized_name)
+        sanitized_names[id] = proposed_sanitized_name
+    end
+
+    return sanitized_names
+end
+
 function write_function(io::IO, model::Model, func::MOI.SingleVariable, sanitized_names::Dict{MOI.VariableIndex, String})
     print(io, sanitized_names[func.variable])
     return
@@ -172,11 +205,11 @@ end
 
 write_constraint_prefix(io::IO, set) = nothing
 
-function write_constraint(io::IO, model::Model, index, sanitized_names::Dict{MOI.VariableIndex, String}; write_name::Bool = true)
+function write_constraint(io::IO, model::Model, index, sanitized_names::Dict{MOI.VariableIndex, String}, sanitized_constraint_names::Union{Nothing, Dict{MOI.ConstraintIndex, String}}=nothing)
     func = MOI.get(model, MOI.ConstraintFunction(), index)
     set = MOI.get(model, MOI.ConstraintSet(), index)
-    if write_name
-        print(io, MOI.get(model, MOI.ConstraintName(), index), ": ")
+    if sanitized_constraint_names !== nothing
+        print(io, sanitized_constraint_names[index], ": ")
     end
     write_constraint_prefix(io, set)
     write_function(io, model, func, sanitized_names)
@@ -214,48 +247,34 @@ function MOI.write_to_file(model::Model, io::IO)
         options=  Options(255, false, false, Set{Char}(), Set{Char}())
         MOI.set(model, MathOptFormat.ModelOptions(), options)
     end
-    max_length = options.maximum_length
-    # Ensure each variable has a unique name that does not infringe LP constraints.
+
+    # Ensure each variable/constraint has a unique name that does not infringe LP constraints.
     MathOptFormat.create_unique_names(model, warn = options.warn)
-    sanitized_names = Dict{MOI.VariableIndex, String}()
-    sanitized_names_set = Set{String}()
-    for v in MOI.get(model, MOI.ListOfVariableIndices())
-        proposed_sanitized_name = sanitized_name(MOI.get(model, MOI.VariableName(), v), options)
-        # In case of duplicate names after sanitization, add a number at the end.
-        if proposed_sanitized_name in sanitized_names_set
-            # If the name is already too long, make some space for the suffix.
-            if length(proposed_sanitized_name) >= max_length
-                proposed_sanitized_name = String(proposed_sanitized_name[1:max_length - 2])
-            end
-            i = 1
-            while proposed_sanitized_name * '_' * string(i) in sanitized_names_set
-                i += 1
+    sanitized_names = sanitized_name_set(
+        Dict(v => MOI.get(model, MOI.VariableName(), v) for v in MOI.get(model, MOI.ListOfVariableIndices())), options)
 
-                # If the maximum length constraint would be broken with the *next* i,
-                # truncate a bit more the proposed_sanitized_name.
-                if length(proposed_sanitized_name * '_' * string(i)) > max_length
-                    proposed_sanitized_name = String(proposed_sanitized_name[1:length(proposed_sanitized_name) - 1])
-                end
-            end
-            proposed_sanitized_name *= '_' * string(i)
-        end
-        push!(sanitized_names_set, proposed_sanitized_name)
-        sanitized_names[v] = proposed_sanitized_name
+    constraint_names_orig = Dict{MOI.ConstraintIndex, String}()
+    for S in SCALAR_SETS
+        names_set = Dict(c => MOI.get(model, MOI.ConstraintName(), c)
+            for c in MOI.get(model, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Float64}, S}()))
+        merge!(constraint_names_orig, names_set)
     end
+    sanitized_constraint_names = sanitized_name_set(constraint_names_orig, options)
 
+    # Actually write the file.
     write_sense(io, model)
     write_objective(io, model, sanitized_names)
     println(io, "subject to")
     for S in SCALAR_SETS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.ScalarAffineFunction{Float64}, S}())
-            write_constraint(io, model, index, sanitized_names; write_name = true)
+            write_constraint(io, model, index, sanitized_names, sanitized_constraint_names)
         end
     end
 
     println(io, "Bounds")
     for S in SCALAR_SETS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{MOI.SingleVariable, S}())
-            write_constraint(io, model, index, sanitized_names; write_name = false)
+            write_constraint(io, model, index, sanitized_names)
         end
     end
 
