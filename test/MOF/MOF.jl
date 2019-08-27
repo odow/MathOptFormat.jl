@@ -384,7 +384,22 @@ end
             c2: x >= 0.0
         """, ["x", "y"], ["c1", "c2"])
     end
-
+    @testset "NormOneCone" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in NormOneCone(2)
+            c2: x >= 0.0
+        """, ["x", "y"], ["c1", "c2"])
+    end
+    @testset "NormInfinityCone" begin
+        test_model_equality("""
+            variables: x, y
+            minobjective: x
+            c1: [x, y] in NormInfinityCone(2)
+            c2: x >= 0.0
+        """, ["x", "y"], ["c1", "c2"])
+    end
     # Clean up
     sleep(1.0)  # allow time for unlink to happen
     rm(TEST_MOF_FILE, force=true)

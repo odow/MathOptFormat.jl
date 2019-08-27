@@ -303,6 +303,8 @@ function set_info(::Type{Val{:RotatedSecondOrderCone}})
     return MOI.RotatedSecondOrderCone, "dimension"
 end
 set_info(::Type{Val{:GeometricMeanCone}}) = (MOI.GeometricMeanCone, "dimension")
+set_info(::Type{Val{:NormOneCone}}) = (MOI.NormOneCone, "dimension")
+set_info(::Type{Val{:NormInfinityCone}}) = (MOI.NormInfinityCone, "dimension")
 function set_info(::Type{Val{:RootDetConeTriangle}})
     return MOI.RootDetConeTriangle, "side_dimension"
 end
