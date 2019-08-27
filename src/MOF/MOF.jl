@@ -16,14 +16,13 @@ end
 const Object = DataStructures.OrderedDict{String, Any}
 
 const MOI = MathOptInterface
-const MOIU = MOI.Utilities
 
 struct Nonlinear <: MOI.AbstractScalarFunction
     expr::Expr
 end
 Base.copy(nonlinear::Nonlinear) = Nonlinear(copy(nonlinear.expr))
 
-MOIU.@model(InnerModel,
+MOI.Utilities.@model(InnerModel,
     (MOI.ZeroOne, MOI.Integer),
     (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval,
         MOI.Semicontinuous, MOI.Semiinteger),
@@ -43,13 +42,19 @@ MOIU.@model(InnerModel,
 
 # IndicatorSet is handled by UniversalFallback.
 
-const Model = MOIU.UniversalFallback{InnerModel{Float64}}
+const Model = MOI.Utilities.UniversalFallback{InnerModel{Float64}}
+
+struct ModelOptions <: MOI.AbstractModelAttribute end
+MOI.is_empty(model::Model) = MathOptFormat.is_empty(model, ModelOptions())
+MOI.empty!(model::Model) = MathOptFormat.empty_model(model, ModelOptions())
 
 struct Options
     print_compact::Bool
     validate::Bool
     warn::Bool
 end
+
+MOI.Utilities.map_indices(::Function, attr::Options) = attr
 
 """
     Model(; kwargs...)
@@ -69,13 +74,10 @@ Keyword arguments are:
 function Model(;
     print_compact::Bool = false, validate::Bool = true, warn::Bool = false
 )
-    model = MOIU.UniversalFallback(InnerModel{Float64}())
-    MOI.set(model, MathOptFormat.ModelOptions(), Options(print_compact, validate, warn))
+    model = MOI.Utilities.UniversalFallback(InnerModel{Float64}())
+    MOI.set(model, ModelOptions(), Options(print_compact, validate, warn))
     return model
 end
-
-MOI.is_empty(model::Model) = MathOptFormat.is_empty(model)
-MOI.empty!(model::Model) = MathOptFormat.empty_model(model)
 
 function Base.show(io::IO, ::Model)
     print(io, "A MathOptFormat Model")
