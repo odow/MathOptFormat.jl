@@ -12,11 +12,14 @@ import GZip
 function is_empty(model, model_options)
     return MOI.is_empty(model.model) &&
         isempty(model.constraints) &&
-        length(model.modattr) == 1 &&
-        haskey(model.modattr, model_options) &&
+        isempty(model.modattr) &&
         isempty(model.varattr) &&
         isempty(model.conattr) &&
-        isempty(model.optattr)
+        length(model.optattr) == 1 &&
+        haskey(model.optattr, model_options) &&
+        model.name_to_con === nothing &&
+        isempty(model.con_to_name) &&
+        model.nextconstraintid == 0
 end
 
 function empty_model(model, model_options)

@@ -21,7 +21,7 @@ MOI.Utilities.@model(InnerModel,
 
 const Model = MOI.Utilities.UniversalFallback{InnerModel{Float64}}
 
-struct ModelOptions <: MOI.AbstractModelAttribute end
+struct ModelOptions <: MOI.AbstractOptimizerAttribute end
 MOI.is_empty(model::Model) = MathOptFormat.is_empty(model, ModelOptions())
 MOI.empty!(model::Model) = MathOptFormat.empty_model(model, ModelOptions())
 
