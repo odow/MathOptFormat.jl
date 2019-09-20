@@ -12,13 +12,9 @@ JSONSchema = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
 MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
 [compat]
-DataStructures = ">= 0.15.0"
-GZip = ">= 0.5.0"
-HTTP = ">= 0.8.2"
-JSON = ">= 0.20.0"
-JSONSchema = ">= 0.1.1"
-MathOptInterface = ">=0.9.1"
-julia = ">=1.0"
+HTTP = "~0.8.2"
+MathOptInterface = "~0.9.2"
+julia = "^1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
