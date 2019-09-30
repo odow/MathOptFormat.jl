@@ -36,5 +36,6 @@ const MOIU = MOI.Utilities
                                                            "dummy.gz", "w+")
         @test_throws ArgumentError MathOptFormat.gzip_open((x) -> nothing,
                                                            "dummy.gz", "a+")
+        
     end
 end
