@@ -147,7 +147,7 @@ function gzip_open(f::Function, filename::String, mode::String)
             throw(ArgumentError("Mode must be \"r\" or \"w\""))
         end
     else
-        open(f, filename, mode)
+        return open(f, filename, mode)
     end
 end
 
