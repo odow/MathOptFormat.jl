@@ -3,6 +3,8 @@ module MathOptFormat
 import MathOptInterface
 const MOI = MathOptInterface
 
+import CodecBzip2
+import CodecXz
 import CodecZlib
 
 include("CBF/CBF.jl")
@@ -131,6 +133,46 @@ function create_unique_variable_names(
             MOI.set(model, MOI.VariableName(), index, new_name)
         end
     end
+end
+
+"""
+List of accepted export compression formats. `AUTOMATIC_FILE_COMPRESSION`
+corresponds to a detection from the file name.
+"""
+@enum(FileCompression, NO_FILE_COMPRESSION, BZIP2, GZIP, XZ, AUTOMATIC_FILE_COMPRESSION)
+
+function _filename_to_compression(filename::String)
+    return if endswith(filename, ".bz2")
+        BZIP2
+    elseif endswith(filename, ".gz")
+        GZIP
+    elseif endswith(filename, ".xz")
+        XZ
+    else
+        NO_FILE_COMPRESSION
+    end
+end
+
+"""
+List of accepted export formats. `AUTOMATIC_FILE_FORMAT` corresponds to
+a detection from the file name.
+"""
+@enum(FileFormat, CBF, LP, MOF, MPS, AUTOMATIC_FILE_FORMAT)
+
+function _filename_to_format(filename::String)
+    for extension in ["", ".bz2", ".gz", ".xz"]
+        if endswith(filename, ".mof.json$extension")
+            return MOF
+        elseif endswith(filename, ".cbf$extension")
+            return CBF
+        elseif endswith(filename, ".mps$extension")
+            return MPS
+        elseif endswith(filename, ".lp$extension")
+            return LP
+        end
+    end
+
+    error("File type of $(filename) not recognized by MathOptFormat.jl.")
 end
 
 function gzip_open(f::Function, filename::String, mode::String)
