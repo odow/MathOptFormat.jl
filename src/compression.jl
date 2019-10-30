@@ -2,6 +2,13 @@ function error_mode(mode::String)
     throw(ArgumentError("For dealing with compressed data, mode must be \"r\" or \"w\"; $mode given"))
 end
 
+"""
+    abstract type AbstractCompressionScheme end
+
+Base type to implement a new compression scheme for MathOptFormat. To do so,
+create a concrete subtype (e.g., named after the compression scheme) and
+implement `open(f::Function, filename::String, mode::String, ::YourScheme)`. 
+"""
 abstract type AbstractCompressionScheme end
 
 struct AutomaticCompressionDetection <: AbstractCompressionScheme end
