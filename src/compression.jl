@@ -4,11 +4,14 @@ end
 
 abstract type AbstractCompressionScheme end
 
+struct AutomaticCompressionDetection <: AbstractCompressionScheme end
+# No open() implementation, this would not make sense (flag to indicate that _filename_to_compression should be called).
+
 struct NoCompression <: AbstractCompressionScheme end
 function open(
     f::Function, filename::String, mode::String, ::NoCompression
 )
-    return open(f, filename, mode)
+    return Base.open(f, filename, mode)
 end
 
 struct Gzip <: AbstractCompressionScheme end
@@ -16,23 +19,25 @@ function open(
     f::Function, filename::String, mode::String, ::Gzip
 )
     return if mode == "w"
-        open(f, CodecZlib.GzipCompressorStream, filename, "w")
+        Base.open(f, CodecZlib.GzipCompressorStream, filename, mode)
     elseif mode == "r"
-        open(f, CodecZlib.GzipDecompressorStream, filename, "w")
+        Base.open(f, CodecZlib.GzipDecompressorStream, filename, mode)
+    else
+        error_mode(mode)
     end
-    error_mode(mode)
 end
 
 struct Bzip2 <: AbstractCompressionScheme end
 function open(
     f::Function, filename::String, mode::String, ::Bzip2
 )
-    return if mode == "w"
-        open(f, CodecBzip2.Bzip2CompressorStream, filename, "w")
+    if mode == "w"
+        Base.open(f, CodecBzip2.Bzip2CompressorStream, filename, mode)
     elseif mode == "r"
-        open(f, CodecBzip2.Bzip2DecompressorStream, filename, "w")
+        Base.open(f, CodecBzip2.Bzip2DecompressorStream, filename, mode)
+    else
+        error_mode(mode)
     end
-    error_mode(mode)
 end
 
 struct Xz <: AbstractCompressionScheme end
@@ -40,9 +45,22 @@ function open(
     f::Function, filename::String, mode::String, ::Xz
 )
     return if mode == "w"
-        open(f, CodecXz.XzDecompressorStream, filename, "w")
+        Base.open(f, CodecXz.XzDecompressorStream, filename, mode)
     elseif mode == "r"
-        open(f, CodecXz.XzCompressorStream, filename, "w")
+        Base.open(f, CodecXz.XzCompressorStream, filename, mode)
+    else
+        error_mode(mode)
     end
-    error_mode(mode)
+end
+
+function _filename_to_compression(filename::String)
+    if endswith(filename, ".bz2")
+        return Bzip2()
+    elseif endswith(filename, ".gz")
+        return Gzip()
+    elseif endswith(filename, ".xz")
+        return Xz()
+    else
+        return NoCompression()
+    end
 end

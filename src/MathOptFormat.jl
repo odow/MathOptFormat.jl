@@ -137,28 +137,6 @@ function create_unique_variable_names(
 end
 
 """
-List of accepted export compression formats. `AUTOMATIC_FILE_COMPRESSION`
-corresponds to a detection from the file name, only based on the extension.
-"""
-@enum(FileCompression, NO_FILE_COMPRESSION, BZIP2, GZIP, XZ, AUTOMATIC_FILE_COMPRESSION)
-
-const _compression_formats = Dict{FileCompression, Tuple{String, Any, Any}}(
-    # ENUMERATED VALUE => extension, decompressor, compressor
-    BZIP2 => (".bz2", CodecBzip2.Bzip2DecompressorStream, CodecBzip2.Bzip2CompressorStream),
-    GZIP => (".gz", CodecZlib.GzipDecompressorStream, CodecZlib.GzipCompressorStream),
-    XZ => (".xz", CodecXz.XzDecompressorStream, CodecXz.XzCompressorStream)
-)
-
-function _filename_to_compression(filename::String)
-    for (format, compr) in _compression_formats
-        if endswith(filename, compr[1])
-            return format
-        end
-    end
-    return NO_FILE_COMPRESSION
-end
-
-"""
 List of accepted export formats. `AUTOMATIC_FILE_FORMAT` corresponds to
 a detection from the file name, only based on the extension (regardless of
 compression format).
@@ -174,7 +152,7 @@ const _file_formats = Dict{FileFormat, Tuple{String, Any}}(
 )
 
 function _filename_to_format(filename::String)
-    for compr_ext in vcat([""], [v[1] for v in values(_compression_formats)])
+    for compr_ext in ["", ".bz2", ".gz", ".xz"]
         for (type, format) in _file_formats
             if endswith(filename, "$(format[1])$(compr_ext)")
                 return type
@@ -189,37 +167,24 @@ function _filename_to_model(filename::String)
     return _file_formats[_filename_to_format(filename)][2]()
 end
 
-function gzip_open(f::Function, filename::String, mode::String; compression::FileCompression=AUTOMATIC_FILE_COMPRESSION)
-    if compression == AUTOMATIC_FILE_COMPRESSION
+function gzip_open(f::Function, filename::String, mode::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
+    if compression == AutomaticCompressionDetection()
         compression = _filename_to_compression(filename)
     end
-
-    if compression == NO_FILE_COMPRESSION
-        return open(f, filename, mode)
-    else
-        if mode == "r"
-            stream = _compression_formats[compression][2]
-        elseif mode == "w"
-            stream = _compression_formats[compression][3]
-        else
-            throw(ArgumentError("For dealing with compressed data, mode must be \"r\" or \"w\""))
-        end
-
-        return open(f, stream, filename, mode)
-    end
+    return open(f, filename, mode, compression)
 end
 
 const MATH_OPT_FORMATS = Union{
     CBF.InnerModel, LP.InnerModel, MOF.Model, MPS.InnerModel
 }
 
-function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String; compression::FileCompression=AUTOMATIC_FILE_COMPRESSION)
+function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
     gzip_open(filename, "w", compression=compression) do io
         MOI.write_to_file(model, io)
     end
 end
 
-function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String; compression::FileCompression=AUTOMATIC_FILE_COMPRESSION)
+function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
     gzip_open(filename, "r", compression=compression) do io
         MOI.read_from_file(model, io)
     end
