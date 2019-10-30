@@ -141,16 +141,19 @@ corresponds to a detection from the file name.
 """
 @enum(FileCompression, NO_FILE_COMPRESSION, BZIP2, GZIP, XZ, AUTOMATIC_FILE_COMPRESSION)
 
+const _compression_formats = Dict{String, Tuple{FileCompression, Any, Any}}(
+    ".bz2" => (BZIP2, CodecBzip2.Bzip2DecompressorStream, CodecBzip2.Bzip2CompressorStream),
+    ".gz" => (GZIP, CodecZlib.GzipDecompressorStream, CodecZlib.GzipCompressorStream),
+    ".xz" => (XZ, CodecXz.XzDecompressorStream, CodecXz.XzCompressorStream)
+)
+
 function _filename_to_compression(filename::String)
-    return if endswith(filename, ".bz2")
-        BZIP2
-    elseif endswith(filename, ".gz")
-        GZIP
-    elseif endswith(filename, ".xz")
-        XZ
-    else
-        NO_FILE_COMPRESSION
+    for (ext, compr) in _compression_formats
+        if endswith(filename, ext)
+            return compr[1]
+        end
     end
+    return NO_FILE_COMPRESSION
 end
 
 """
@@ -160,7 +163,7 @@ a detection from the file name.
 @enum(FileFormat, CBF, LP, MOF, MPS, AUTOMATIC_FILE_FORMAT)
 
 function _filename_to_format(filename::String)
-    for extension in ["", ".bz2", ".gz", ".xz"]
+    for extension in vcat([""], keys(_compression_formats))
         if endswith(filename, ".mof.json$extension")
             return MOF
         elseif endswith(filename, ".cbf$extension")
@@ -176,21 +179,23 @@ function _filename_to_format(filename::String)
 end
 
 function gzip_open(f::Function, filename::String, mode::String)
-    if endswith(filename, ".gz")
-        if mode == "r"
-            open(CodecZlib.GzipDecompressorStream, filename, mode) do io
-                f(io)
+    for (ext, compr) in _compression_formats
+        if endswith(filename, ext)
+            if mode == "r"
+                return open(compr[2], filename, mode) do io
+                    f(io)
+                end
+            elseif mode == "w"
+                return open(compr[3], filename, mode) do io
+                    f(io)
+                end
+            else
+                throw(ArgumentError("For dealing with compressed data, mode must be \"r\" or \"w\""))
             end
-        elseif mode == "w"
-            open(CodecZlib.GzipCompressorStream, filename, mode) do io
-                f(io)
-            end
-        else
-            throw(ArgumentError("Mode must be \"r\" or \"w\""))
         end
-    else
-        return open(f, filename, mode)
     end
+    # If not a compressed file...
+    return open(f, filename, mode)
 end
 
 const MATH_OPT_FORMATS = Union{
