@@ -7,6 +7,7 @@ import CodecBzip2
 import CodecXz
 import CodecZlib
 
+include("compression.jl")
 include("CBF/CBF.jl")
 include("LP/LP.jl")
 include("MOF/MOF.jl")
