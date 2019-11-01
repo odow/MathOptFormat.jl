@@ -29,25 +29,14 @@ const MOIU = MOI.Utilities
 
     @testset "Calling MOF.open" begin
         for cs in [MathOptFormat.Bzip2(), MathOptFormat.Gzip(), MathOptFormat.Xz()]
-            @test_throws ArgumentError MathOptFormat.open((x) -> nothing,
+            @test_throws ArgumentError MathOptFormat._compressed_open((x) -> nothing,
                                                           "dummy.gz", "a", cs)
-            @test_throws ArgumentError MathOptFormat.open((x) -> nothing,
+            @test_throws ArgumentError MathOptFormat._compressed_open((x) -> nothing,
                                                           "dummy.gz", "r+", cs)
-            @test_throws ArgumentError MathOptFormat.open((x) -> nothing,
+            @test_throws ArgumentError MathOptFormat._compressed_open((x) -> nothing,
                                                           "dummy.gz", "w+", cs)
-            @test_throws ArgumentError MathOptFormat.open((x) -> nothing,
+            @test_throws ArgumentError MathOptFormat._compressed_open((x) -> nothing,
                                                           "dummy.gz", "a+", cs)
         end
-    end
-
-    @testset "Calling gzip_open" begin
-        @test_throws ArgumentError MathOptFormat.gzip_open((x) -> nothing,
-                                                           "dummy.gz", "a")
-        @test_throws ArgumentError MathOptFormat.gzip_open((x) -> nothing,
-                                                           "dummy.gz", "r+")
-        @test_throws ArgumentError MathOptFormat.gzip_open((x) -> nothing,
-                                                           "dummy.gz", "w+")
-        @test_throws ArgumentError MathOptFormat.gzip_open((x) -> nothing,
-                                                           "dummy.gz", "a+")
     end
 end

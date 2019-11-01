@@ -167,25 +167,20 @@ function _filename_to_model(filename::String)
     return _file_formats[_filename_to_format(filename)][2]()
 end
 
-function gzip_open(f::Function, filename::String, mode::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
-    if compression == AutomaticCompressionDetection()
-        compression = _filename_to_compression(filename)
-    end
-    return open(f, filename, mode, compression)
-end
-
 const MATH_OPT_FORMATS = Union{
     CBF.InnerModel, LP.InnerModel, MOF.Model, MPS.InnerModel
 }
 
-function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
-    gzip_open(filename, "w", compression=compression) do io
+function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompression())
+    compression = _automatic_compression(filename, compression)
+    _compressed_open(filename, "w", compression) do io
         MOI.write_to_file(model, io)
     end
 end
 
-function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompressionDetection())
-    gzip_open(filename, "r", compression=compression) do io
+function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String; compression::AbstractCompressionScheme=AutomaticCompression())
+    compression = _automatic_compression(filename, compression)
+    _compressed_open(filename, "r", compression) do io
         MOI.read_from_file(model, io)
     end
 end

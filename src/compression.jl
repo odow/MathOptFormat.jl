@@ -7,22 +7,22 @@ end
 
 Base type to implement a new compression scheme for MathOptFormat. To do so,
 create a concrete subtype (e.g., named after the compression scheme) and
-implement `open(f::Function, filename::String, mode::String, ::YourScheme)`. 
+implement `open(f::Function, filename::String, mode::String, ::YourScheme)`.
 """
 abstract type AbstractCompressionScheme end
 
-struct AutomaticCompressionDetection <: AbstractCompressionScheme end
+struct AutomaticCompression <: AbstractCompressionScheme end
 # No open() implementation, this would not make sense (flag to indicate that _filename_to_compression should be called).
 
 struct NoCompression <: AbstractCompressionScheme end
-function open(
+function _compressed_open(
     f::Function, filename::String, mode::String, ::NoCompression
 )
     return Base.open(f, filename, mode)
 end
 
 struct Gzip <: AbstractCompressionScheme end
-function open(
+function _compressed_open(
     f::Function, filename::String, mode::String, ::Gzip
 )
     return if mode == "w"
@@ -35,7 +35,7 @@ function open(
 end
 
 struct Bzip2 <: AbstractCompressionScheme end
-function open(
+function _compressed_open(
     f::Function, filename::String, mode::String, ::Bzip2
 )
     if mode == "w"
@@ -48,7 +48,7 @@ function open(
 end
 
 struct Xz <: AbstractCompressionScheme end
-function open(
+function _compressed_open(
     f::Function, filename::String, mode::String, ::Xz
 )
     return if mode == "w"
@@ -58,6 +58,13 @@ function open(
     else
         error_mode(mode)
     end
+end
+
+function _automatic_compression(filename::String, compression::AbstractCompressionScheme)
+    if compression == AutomaticCompression()
+        return _filename_to_compression(filename)
+    end
+    return compression
 end
 
 function _filename_to_compression(filename::String)
