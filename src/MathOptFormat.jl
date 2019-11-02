@@ -191,9 +191,9 @@ end
 Create a MOI model by reading `filename`. Type of the returned model depends on
 the extension of `filename`.
 """
-function read_from_file(filename::String)
+function read_from_file(filename::String; compression::AbstractCompressionScheme=AutomaticCompression())
     model = _filename_to_model(filename)
-    MOI.read_from_file(model, filename)
+    MOI.read_from_file(model, filename, compression=compression)
     return model
 end
 
