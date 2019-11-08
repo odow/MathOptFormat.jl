@@ -47,18 +47,18 @@ function _compressed_open(
     end
 end
 
-struct Xz <: AbstractCompressionScheme end
-function _compressed_open(
-    f::Function, filename::String, mode::String, ::Xz
-)
-    return if mode == "w"
-        Base.open(f, CodecXz.XzDecompressorStream, filename, mode)
-    elseif mode == "r"
-        Base.open(f, CodecXz.XzCompressorStream, filename, mode)
-    else
-        error_mode(mode)
-    end
-end
+# struct Xz <: AbstractCompressionScheme end
+# function _compressed_open(
+#     f::Function, filename::String, mode::String, ::Xz
+# )
+#     return if mode == "w"
+#         Base.open(f, CodecXz.XzDecompressorStream, filename, mode)
+#     elseif mode == "r"
+#         Base.open(f, CodecXz.XzCompressorStream, filename, mode)
+#     else
+#         error_mode(mode)
+#     end
+# end
 
 function _automatic_compression(filename::String, compression::AbstractCompressionScheme)
     if compression == AutomaticCompression()
@@ -72,8 +72,8 @@ function _filename_to_compression(filename::String)
         return Bzip2()
     elseif endswith(filename, ".gz")
         return Gzip()
-    elseif endswith(filename, ".xz")
-        return Xz()
+    # elseif endswith(filename, ".xz")
+    #     return Xz()
     else
         return NoCompression()
     end
