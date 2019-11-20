@@ -4,7 +4,7 @@ import MathOptInterface
 const MOI = MathOptInterface
 
 import CodecBzip2
-import CodecXz
+# import CodecXz
 import CodecZlib
 
 include("compression.jl")
