@@ -98,7 +98,6 @@ function validate(
     compression::MathOptFormat.AbstractCompressionScheme =
         MathOptFormat.AutomaticCompression()
 )
-    compression = MathOptFormat._automatic_compression(filename, compression)
     MathOptFormat._compressed_open(filename, "r", compression) do io
         validate(io)
     end

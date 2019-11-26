@@ -401,4 +401,5 @@ end
     # Clean up
     sleep(1.0)  # allow time for unlink to happen
     rm(TEST_MOF_FILE, force=true)
+    rm(TEST_MOF_FILE * ".gz", force=true)
 end
