@@ -115,8 +115,6 @@ end
         x = MOI.add_variable(model)
         MOI.set(model, MOI.VariableName(), x, "x")
         MOI.set(model, MOI.ObjectiveSense(), MOI.FEASIBILITY_SENSE)
-        MOI.set(model, MOI.ObjectiveFunction{MOI.SingleVariable}(),
-            MOI.SingleVariable(x))
         MOI.write_to_file(model, TEST_MOF_FILE)
         model_2 = MOF.Model(validate=false)
         MOI.read_from_file(model_2, TEST_MOF_FILE)
