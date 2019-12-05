@@ -16,6 +16,16 @@ MOI.Utilities.@model(InnerModel,
     ()
 )
 
+function MOI.supports(
+    ::InnerModel,
+    ::MOI.ObjectiveFunction{<:Union{
+        MOI.ScalarQuadraticFunction,
+        MOI.VectorQuadraticFunction
+    }}
+)
+    return false
+end
+
 struct Options
     warn::Bool
 end
@@ -32,7 +42,7 @@ Keyword arguments are:
  - `warn::Bool=false`: print a warning when variables or constraints are renamed.
 """
 function Model(;
-        warn::Bool = false
+    warn::Bool = false
 )
     model = InnerModel{Float64}()
     model.ext[:MPS_OPTIONS] = Options(warn)
@@ -55,7 +65,10 @@ function Base.write(io::IO, model::InnerModel)
     MathOptFormat.create_unique_names(
         model;
         warn = options.warn,
-        replacements = Function[s -> replace(s, ' ' => '_')]
+        replacements = Function[
+            s -> replace(s, ' ' => '_')
+            s -> replace(s, r"^OBJ" => "_OBJ")
+        ]
     )
     write_model_name(io, model)
     write_rows(io, model)
@@ -90,7 +103,15 @@ const LINEAR_CONSTRAINTS = (
 )
 
 function write_rows(io::IO, model::InnerModel)
-    println(io, "ROWS\n N  OBJ")
+    obj_type = MOI.get(model, MOI.ObjectiveFunctionType())
+    obj_func = MOI.get(model, MOI.ObjectiveFunction{obj_type}())
+    if MOI.output_dimension(obj_func) == 1
+        println(io, "ROWS\n N  OBJ")
+    else
+        for i = 1:MOI.output_dimension(obj_func)
+            println(io, "ROWS\n N  OBJ$(i)")
+        end
+    end
     for (set_type, sense_char) in LINEAR_CONSTRAINTS
         for index in MOI.get(model, MOI.ListOfConstraintIndices{
                                         MOI.ScalarAffineFunction{Float64},
@@ -132,8 +153,12 @@ function add_coefficient(coefficients, variable_name, row_name, coefficient)
 end
 
 function extract_terms(
-        model::InnerModel, coefficients, row_name::String,
-        func::MOI.ScalarAffineFunction, discovered_columns::Set{String})
+    model::InnerModel,
+    coefficients,
+    row_name::String,
+    func::MOI.ScalarAffineFunction,
+    discovered_columns::Set{String}
+)
     for term in func.terms
         variable_name = MOI.get(model, MOI.VariableName(), term.variable_index)
         add_coefficient(coefficients, variable_name, row_name, term.coefficient)
@@ -143,11 +168,32 @@ function extract_terms(
 end
 
 function extract_terms(
-        model::InnerModel, coefficients, row_name::String, func::MOI.SingleVariable,
-        discovered_columns::Set{String})
+    model::InnerModel,
+    coefficients,
+    row_name::String,
+    func::MOI.SingleVariable,
+    discovered_columns::Set{String}
+)
     variable_name = MOI.get(model, MOI.VariableName(), func.variable)
     add_coefficient(coefficients, variable_name, row_name, 1.0)
     push!(discovered_columns, variable_name)
+    return
+end
+
+function extract_terms(
+    model::InnerModel,
+    coefficients,
+    row_name::String,
+    func::MOI.VectorAffineFunction,
+    discovered_columns::Set{String}
+)
+    for v_term in func.terms
+        term = v_term.scalar_term
+        c_name = row_name * v_term.output_index
+        v_name = MOI.get(model, MOI.VariableName(), term.variable_index)
+        add_coefficient(coefficients, v_name, c_name, term.coefficient)
+        push!(discovered_columns, v_name)
+    end
     return
 end
 
@@ -163,13 +209,17 @@ function write_columns(io::IO, model::InnerModel)
     println(io, "COLUMNS")
     coefficients = Dict{String, Vector{Tuple{String, Float64}}}()
     for (set_type, sense_char) in LINEAR_CONSTRAINTS
-        for index in MOI.get(model, MOI.ListOfConstraintIndices{
-                                        MOI.ScalarAffineFunction{Float64},
-                                        set_type}())
+        for index in MOI.get(
+            model,
+            MOI.ListOfConstraintIndices{
+                MOI.ScalarAffineFunction{Float64}, set_type
+            }()
+        )
             row_name = MOI.get(model, MOI.ConstraintName(), index)
             func = MOI.get(model, MOI.ConstraintFunction(), index)
             extract_terms(
-                model, coefficients, row_name, func, discovered_columns)
+                model, coefficients, row_name, func, discovered_columns
+            )
         end
     end
     obj_func_type = MOI.get(model, MOI.ObjectiveFunctionType())
@@ -180,7 +230,7 @@ function write_columns(io::IO, model::InnerModel)
         # coefficients.
         for (v_name, terms) in coefficients
             for (idx, (row_name, coef)) in enumerate(terms)
-                if row_name == "OBJ"
+                if startswith(row_name, "OBJ")
                     terms[idx] = (row_name, -coef)
                 end
             end
@@ -459,12 +509,19 @@ end
 
 mutable struct TempMPSModel
     name::String
-    obj_name::String
+    obj_names::Vector{String}
     columns::Dict{String, TempColumn}
     rows::Dict{String, TempRow}
     intorg_flag::Bool  # A flag used to parse COLUMNS section.
-    TempMPSModel() = new("", "", Dict{String, TempColumn}(),
-        Dict{String, TempRow}(), false)
+    function TempMPSModel()
+        return new(
+            "",
+            String[],
+            Dict{String, TempColumn}(),
+            Dict{String, TempRow}(),
+            false
+        )
+    end
 end
 
 const HEADERS = ("ROWS", "COLUMNS", "RHS", "RANGES", "BOUNDS", "SOS", "ENDATA")
@@ -546,33 +603,45 @@ function copy_to(model::InnerModel, temp::TempMPSModel)
     end
     # Add linear constraints.
     for (c_name, row) in temp.rows
-        if c_name == temp.obj_name
-            # Set objective.
-            MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-            obj_func = if length(row.terms) == 1 &&
-                    first(row.terms).second == 1.0
-                MOI.SingleVariable(variable_map[first(row.terms).first])
-            else
-                MOI.ScalarAffineFunction([
-                    MOI.ScalarAffineTerm(coef, variable_map[v_name])
-                        for (v_name, coef) in row.terms],
-                0.0)
-            end
-            MOI.set(model, MOI.ObjectiveFunction{typeof(obj_func)}(), obj_func)
+        if c_name in temp.obj_names
+            continue
+        end
+        constraint_function = MOI.ScalarAffineFunction([
+            MOI.ScalarAffineTerm(coef, variable_map[v_name])
+                for (v_name, coef) in row.terms],
+            0.0)
+        set = bounds_to_set(row.lower, row.upper)
+        if set !== nothing
+            c = MOI.add_constraint(model, constraint_function, set)
+            MOI.set(model, MOI.ConstraintName(), c, c_name)
         else
-            constraint_function = MOI.ScalarAffineFunction([
-                MOI.ScalarAffineTerm(coef, variable_map[v_name])
-                    for (v_name, coef) in row.terms],
-                0.0)
-            set = bounds_to_set(row.lower, row.upper)
-            if set !== nothing
-                c = MOI.add_constraint(model, constraint_function, set)
-                MOI.set(model, MOI.ConstraintName(), c, c_name)
-            else
-                error("Expected a non-empty set for $(c_name). Got row=$(row)")
-            end
+            error("Expected a non-empty set for $(c_name). Got row=$(row)")
         end
     end
+    # Set objective.
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
+    obj_func = if length(temp.obj_names) == 1
+        row = temp.rows[first(temp.obj_names)]
+        MOI.ScalarAffineFunction(
+            [MOI.ScalarAffineTerm(coef, variable_map[v_name]) for (v_name, coef) in row.terms],
+            0.0
+        )
+    else
+        v_terms = MOI.VectorAffineTerm{Float64}[]
+        for (i, name) in enumerate(temp.obj_names)
+            row = temp.rows[name]
+            for (v_name, coef) in row.terms
+                push!(
+                    v_terms,
+                    MOI.VectorAffineTerm(
+                        i, MOI.ScalarAffineTerm(coef, variable_map[v_name])
+                    )
+                )
+            end
+        end
+        MOI.VectorAffineFunction(v_terms, zeros(length(temp.obj_names)))
+    end
+    MOI.set(model, MOI.ObjectiveFunction{typeof(obj_func)}(), obj_func)
     return
 end
 
@@ -603,20 +672,14 @@ function parse_rows_line(data::TempMPSModel, items::Vector{String})
     sense, name = items
     if haskey(data.rows, name)
         error("Duplicate row encountered: $(line).")
-    elseif sense != "N" && sense != "L" && sense != "G" && sense != "E"
+    elseif !(sense in ("N", "L", "G", "E"))
         error("Invalid row sense: $(join(items, " "))")
     end
     row = TempRow()
     row.sense = sense
     if sense == "N"
-        if data.obj_name != ""
-            # Detected a duplicate objective. Skip it.
-            return name
-        end
-        data.obj_name = name
-    end
-    # Add some default bounds for the constraints.
-    if sense == "G"
+        push!(data.obj_names, name)
+    elseif sense == "G"
         row.lower = 0.0
     elseif sense == "L"
         row.upper = 0.0
@@ -635,7 +698,7 @@ end
 function parse_single_coefficient(data, row_name, column_name, value)
     row = get(data.rows, row_name, nothing)
     if row === nothing
-        error("ROW name $(row_name) not recognised. Is it in the ROWS field?")
+        error("Row name $(row_name) not recognised. Is it in the ROWS field?")
     end
     if haskey(row.terms, column_name)
         row.terms[column_name] += parse(Float64, value)

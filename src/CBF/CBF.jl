@@ -29,6 +29,17 @@ function MOI.supports_constraint(
     return true
 end
 
+function MOI.supports(
+    ::InnerModel,
+    ::MOI.ObjectiveFunction{<:Union{
+        MOI.VectorOfVariables,
+        MOI.VectorAffineFunction{Float64},
+        MOI.VectorQuadraticFunction{Float64}
+    }}
+)
+    return false
+end
+
 struct Options end
 
 get_options(m::InnerModel) = get(m.ext, :CBF_OPTIONS, Options())

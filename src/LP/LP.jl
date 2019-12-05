@@ -16,6 +16,18 @@ MOI.Utilities.@model(InnerModel,
     ()
 )
 
+function MOI.supports(
+    ::InnerModel,
+    ::MOI.ObjectiveFunction{<:Union{
+        MOI.ScalarQuadraticFunction{Float64},
+        MOI.VectorOfVariables,
+        MOI.VectorAffineFunction{Float64},
+        MOI.VectorQuadraticFunction{Float64}
+    }}
+)
+    return false
+end
+
 struct Options
     maximum_length::Int
     warn::Bool

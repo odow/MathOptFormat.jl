@@ -23,6 +23,7 @@ List of accepted export formats.
 - `FORMAT_CBF`: the Conic Benchmark format
 - `FORMAT_LP`: the LP file format
 - `FORMAT_MOF`: the MathOptFormat file format
+- `FORMAT_MOP`: the Multi-Objective Problem file format
 - `FORMAT_MPS`: the MPS file format
 - `FORMAT_SDPA`: the SemiDefinite Programming Algorithm format
 """
@@ -32,6 +33,7 @@ List of accepted export formats.
     FORMAT_CBF,
     FORMAT_LP,
     FORMAT_MOF,
+    FORMAT_MOP,
     FORMAT_MPS,
     FORMAT_SDPA,
 )
@@ -63,6 +65,8 @@ function Model(
         return LP.Model(; kwargs...)
     elseif format == FORMAT_MOF
         return MOF.Model(; kwargs...)
+    elseif format == FORMAT_MOP
+        return MPS.Model(; kwargs...)
     elseif format == FORMAT_MPS
         return MPS.Model(; kwargs...)
     elseif format == FORMAT_SDPA
@@ -76,8 +80,9 @@ function Model(
             (".cbf", CBF.Model),
             (".lp", LP.Model),
             (".mof.json", MOF.Model),
+            (".mop", MPS.Model),
             (".mps", MPS.Model),
-            (".sdpa", SDPA.Model)
+            (".sdpa", SDPA.Model),
         ]
             if endswith(filename, ext) || occursin("$(ext).", filename)
                 return model(; kwargs...)
