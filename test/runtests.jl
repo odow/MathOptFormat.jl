@@ -63,21 +63,15 @@ const MOIU = MOI.Utilities
             (MathOptFormat.FORMAT_MOF, MathOptFormat.MOF.Model()),
             (MathOptFormat.FORMAT_MPS, MathOptFormat.MPS.Model()),
         ]
-            @test typeof(MathOptFormat.Model(format = format)) == typeof(model)
+            @test typeof(
+                MathOptFormat.Model(format = format, filename = "foo.bar")
+            ) == typeof(model)
         end
         @test_throws(
             ErrorException(
-                "When `format == FORMAT_AUTOMATIC`, you must pass a `filename`."
+                "When `format==FORMAT_AUTOMATIC` you must pass a `filename`."
             ),
             MathOptFormat.Model(format = MathOptFormat.FORMAT_AUTOMATIC)
-        )
-        @test_throws(
-            ErrorException(
-                "You cannot pass `format` and `filename` at the same time."
-            ),
-            MathOptFormat.Model(
-                format = MathOptFormat.FORMAT_CBF, filename = "c.cbf"
-            )
         )
         for (ext, model) in [
             (".cbf", MathOptFormat.CBF.Model()),
