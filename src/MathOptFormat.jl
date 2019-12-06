@@ -152,15 +152,15 @@ const MATH_OPT_FORMATS = Union{
 
 List of accepted export formats.
 
+- `FORMAT_AUTOMATIC`: try to detect the file format based on the file name
 - `FORMAT_CBF`: the Conic Benchmark format
 - `FORMAT_LP`: the LP file format
 - `FORMAT_MOF`: the MathOptFormat file format
 - `FORMAT_MPS`: the MPS file format
-- `AUTOMATIC_FILE_FORMAT`: try to detect the file format based on the file name.
 """
 @enum(
     FileFormat,
-    AUTOMATIC_FILE_FORMAT,
+    FORMAT_AUTOMATIC,
     FORMAT_CBF,
     FORMAT_LP,
     FORMAT_MOF,
@@ -174,8 +174,7 @@ List of accepted export formats.
 
 Return model corresponding to the `FileFormat` `format`.
 
-If `format == AUTOMATIC_FILE_FORMAT`, attempt to guess the format from the
-`filename`.
+If `format == FORMAT_AUTOMATIC`, guess the format from the `filename`.
 """
 function new_model(
     format::FileFormat, filename::Union{Nothing, String} = nothing
@@ -189,9 +188,12 @@ function new_model(
     elseif format == FORMAT_MPS
         return MPS.Model()
     else
-        @assert format == AUTOMATIC_FILE_FORMAT
+        @assert format == FORMAT_AUTOMATIC
         if filename === nothing
-            error("Unable to automatically detect file format. No filename provided.")
+            error(
+                "Unable to automatically detect file format. " *
+                "No filename provided."
+            )
         end
         for (ext, model) in [
             (".cbf", CBF.Model),
@@ -199,7 +201,7 @@ function new_model(
             (".mof.json", MOF.Model),
             (".mps", MPS.Model)
         ]
-            if endswith(filename, ext) || occursin(ext, filename)
+            if endswith(filename, ext) || occursin("$(ext).", filename)
                 return model()
             end
         end
@@ -207,45 +209,26 @@ function new_model(
     end
 end
 
-function MOI.write_to_file(
-    model::MATH_OPT_FORMATS,
-    filename::String;
-    compression::AbstractCompressionScheme = AutomaticCompression()
-)
-    _compressed_open(filename, "w", compression) do io
+function MOI.write_to_file(model::MATH_OPT_FORMATS, filename::String)
+    compressed_open(filename, "w", AutomaticCompression()) do io
         write(io, model)
     end
 end
 
-function MOI.read_from_file(
-    model::MATH_OPT_FORMATS,
-    filename::String;
-    compression::AbstractCompressionScheme = AutomaticCompression()
-)
-    _compressed_open(filename, "r", compression) do io
+function MOI.read_from_file(model::MATH_OPT_FORMATS, filename::String)
+    compressed_open(filename, "r", AutomaticCompression()) do io
         read!(io, model)
     end
 end
 
 """
-    read_from_file(
-        filename::String;
-        compression::AbstractCompressionScheme = AutomaticCompression(),
-        file_format::FileFormat = AUTOMATIC_FILE_FORMAT,
-    )
+    read_from_file(filename::String; format::FileFormat = FORMAT_AUTOMATIC)
 
-Return a new MOI model by reading `filename`.
-
-Default arguments for `file_format` and `compression` will attempt to detect
-model type from `filename`.
+Return a new MOI model by the file `filename` in the format `format`.
 """
-function read_from_file(
-    filename::String;
-    compression::AbstractCompressionScheme = AutomaticCompression(),
-    file_format::FileFormat = AUTOMATIC_FILE_FORMAT,
-)
-    model = new_model(file_format, filename)
-    MOI.read_from_file(model, filename; compression = compression)
+function read_from_file(filename::String; format::FileFormat = FORMAT_AUTOMATIC)
+    model = new_model(format, filename)
+    MOI.read_from_file(model, filename)
     return model
 end
 

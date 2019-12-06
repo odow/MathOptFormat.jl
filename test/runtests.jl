@@ -28,10 +28,10 @@ const MOIU = MOI.Utilities
         end
     end
 
-    @testset "Calling MOF._compressed_open" begin
+    @testset "Calling MOF.compressed_open" begin
         for cs in [MathOptFormat.Bzip2(), MathOptFormat.Gzip()]
             for open_type in ["a", "r+", "w+", "a+"]
-                @test_throws ArgumentError MathOptFormat._compressed_open(
+                @test_throws ArgumentError MathOptFormat.compressed_open(
                     (x) -> nothing, "dummy.gz", open_type, cs
                 )
             end
@@ -66,7 +66,7 @@ const MOIU = MOI.Utilities
         end
         @test_throws(
             ErrorException("Unable to automatically detect file format. No filename provided."),
-            MathOptFormat.new_model(MathOptFormat.AUTOMATIC_FILE_FORMAT)
+            MathOptFormat.new_model(MathOptFormat.FORMAT_AUTOMATIC)
         )
         for (ext, model) in [
             (".cbf", MathOptFormat.CBF.Model()),
@@ -75,15 +75,15 @@ const MOIU = MOI.Utilities
             (".mps", MathOptFormat.MPS.Model()),
         ]
             @test typeof(MathOptFormat.new_model(
-                MathOptFormat.AUTOMATIC_FILE_FORMAT, "a$(ext)"
+                MathOptFormat.FORMAT_AUTOMATIC, "a$(ext)"
             )) == typeof(model)
             @test typeof(MathOptFormat.new_model(
-                MathOptFormat.AUTOMATIC_FILE_FORMAT, "a$(ext).gz"
+                MathOptFormat.FORMAT_AUTOMATIC, "a$(ext).gz"
             )) == typeof(model)
         end
         @test_throws(
             ErrorException("Unable to automatically detect format of a.b."),
-            MathOptFormat.new_model(MathOptFormat.AUTOMATIC_FILE_FORMAT, "a.b")
+            MathOptFormat.new_model(MathOptFormat.FORMAT_AUTOMATIC, "a.b")
         )
     end
 end
