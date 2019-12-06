@@ -17,23 +17,38 @@ MOI.Utilities.@model(InnerModel,
     (),
     (MOI.VectorAffineFunction,)
 )
+
 function MOI.supports_constraint(
-    ::InnerModel{T}, ::Type{MOI.SingleVariable},
-    ::Type{<:MOI.Utilities.SUPPORTED_VARIABLE_SCALAR_SETS{T}}) where T
+    ::InnerModel{T},
+    ::Type{MOI.SingleVariable},
+    ::Type{<:MOI.Utilities.SUPPORTED_VARIABLE_SCALAR_SETS{T}}
+) where {T}
 
     return false
 end
-MOI.supports(::InnerModel, ::MOI.ObjectiveFunction{MOI.SingleVariable}) = false
-MOI.supports(::InnerModel{T}, ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}) where {T} = false
+
+function MOI.supports(
+    ::InnerModel,
+    ::MOI.ObjectiveFunction{MOI.SingleVariable}
+)
+    return false
+end
+
+function MOI.supports(
+    ::InnerModel{T},
+    ::MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}
+) where {T}
+    return false
+end
 
 struct Options end
 
 get_options(m::InnerModel) = get(m.ext, :SDPA_OPTIONS, Options())
 
 """
-    Model(T::Type = Float64)
+    Model(; number_type::Type = Float64)
 
-Create an empty instance of `MathOptFormat.SDPA.Model{T}`.
+Create an empty instance of `MathOptFormat.SDPA.Model{number_type}`.
 
 Note that the model is in geometric form. That is, the SDP model is represented
 as a minimization with free variables and affine constraints in either the
@@ -43,25 +58,28 @@ If a model is in standard form, that is, nonnegative and positive semidefinite
 variables with equality constraints, use `Dualization.jl` to transform it into
 the geometric form.
 """
-function Model(T::Type = Float64)
-    model = InnerModel{T}()
+function Model(; number_type::Type = Float64)
+    model = InnerModel{number_type}()
     model.ext[:SDPA_OPTIONS] = Options()
     return model
 end
 
-Base.show(io::IO, ::InnerModel) = print(io, "A SemiDefinite Programming Algorithm Format (SDPA) model")
+function Base.show(io::IO, ::InnerModel)
+    print(io, "A SemiDefinite Programming Algorithm Format (SDPA) model")
+end
 
 # ==============================================================================
 #
-#   MOI.write_to_file
+#   Base.write
 #
 # ==============================================================================
 
-function MOI.write_to_file(model::InnerModel{T}, io::IO) where T
+function Base.write(io::IO, model::InnerModel{T}) where {T}
     options = get_options(model)
     # Helper functions for MOI constraints.
-    model_cons(con_func, con_set) = MOI.get(model,
-        MOI.ListOfConstraintIndices{con_func, con_set}())
+    function model_cons(con_func, con_set)
+        MOI.get(model, MOI.ListOfConstraintIndices{con_func, con_set}())
+    end
     con_function(con_idx) = MOI.get(model, MOI.ConstraintFunction(), con_idx)
     con_set(con_idx) = MOI.get(model, MOI.ConstraintSet(), con_idx)
 
@@ -76,12 +94,18 @@ function MOI.write_to_file(model::InnerModel{T}, io::IO) where T
     println(io, num_vars)
     function _check_variable_index(vi::MOI.VariableIndex)
         if vi.value > num_vars
-            error("Non-contiguous variable indices not supported. This might be due to deleted variables.")
+            error(
+                "Non-contiguous variable indices not supported. This might " *
+                "be due to deleted variables."
+            )
         end
     end
 
     nonneg = model_cons(MOI.VectorAffineFunction{T}, MOI.Nonnegatives)
-    psd = model_cons(MOI.VectorAffineFunction{T}, MOI.PositiveSemidefiniteConeTriangle)
+    psd = model_cons(
+        MOI.VectorAffineFunction{T},
+        MOI.PositiveSemidefiniteConeTriangle
+    )
     println(io, length(nonneg) + length(psd))
 
     for block in eachindex(nonneg)
@@ -106,7 +130,11 @@ function MOI.write_to_file(model::InnerModel{T}, io::IO) where T
     if sense != MOI.FEASIBILITY_SENSE
         obj = MOI.get(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{T}}())
         if !iszero(MOI.constant(obj))
-            error("Nonzero constant in objective function not supported, note that the constant may be added by the substitution of a bridged variable.")
+            error(
+                "Nonzero constant in objective function not supported. Note " *
+                "that the constant may be added by the substitution of a " *
+                "bridged variable."
+            )
         end
         for term in obj.terms
             _check_variable_index(term.variable_index)
@@ -126,9 +154,11 @@ function MOI.write_to_file(model::InnerModel{T}, io::IO) where T
     end
     println(io)
 
-    index_map = Vector{Tuple{Int, Int}}(undef, MOI.dimension(MOI.PositiveSemidefiniteConeTriangle(max_dim)))
+    index_map = Vector{Tuple{Int, Int}}(
+        undef, MOI.dimension(MOI.PositiveSemidefiniteConeTriangle(max_dim))
+    )
     k = 0
-    for col in 1:max_dim
+    for col = 1:max_dim
         for row in 1:col
             k += 1
             index_map[k] = (row, col)
@@ -173,13 +203,12 @@ function MOI.write_to_file(model::InnerModel{T}, io::IO) where T
     for i in eachindex(psd)
         _print_constraint(length(nonneg) + i, true, psd[i])
     end
-
     return
 end
 
 # ==============================================================================
 #
-#   MOI.read_from_file
+#   Base.read!
 #
 # ==============================================================================
 
@@ -193,11 +222,10 @@ function mat_to_vec_idx(i::Int, j::Int)
     end
 end
 
-function MOI.read_from_file(model::InnerModel{T}, io::IO) where T
+function Base.read!(io::IO, model::InnerModel{T}) where T
     if !MOI.is_empty(model)
         error("Cannot read in file because model is not empty.")
     end
-
     num_variables_read = false
     num_blocks = nothing
     block_sets = nothing
@@ -212,17 +240,13 @@ function MOI.read_from_file(model::InnerModel{T}, io::IO) where T
     objective_read = false
     c = nothing
     funcs = nothing
-
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE)
-
     while !eof(io)
         line = strip(readline(io))
-
         # Skip blank lines and comments (SDPA comments start with `"`).
         if startswith(line, '"')
             continue
         end
-
         if !num_variables_read
             if isempty(line)
                 continue
@@ -298,11 +322,9 @@ function MOI.read_from_file(model::InnerModel{T}, io::IO) where T
             end
         end
     end
-
     for block in 1:num_blocks
         MOI.add_constraint(model, funcs[block], block_sets[block])
     end
-
     return
 end
 

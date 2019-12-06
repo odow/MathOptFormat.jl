@@ -15,7 +15,7 @@ const MOIU = MOI.Utilities
             MathOptFormat.LP.Model,
             MathOptFormat.MOF.Model,
             MathOptFormat.MPS.Model,
-            MathOptFormat.SDPA.Model
+            MathOptFormat.SDPA.Model,
         ]
         for src in models
             model_src = src()
@@ -63,6 +63,7 @@ const MOIU = MOI.Utilities
             (MathOptFormat.FORMAT_LP, MathOptFormat.LP.Model()),
             (MathOptFormat.FORMAT_MOF, MathOptFormat.MOF.Model()),
             (MathOptFormat.FORMAT_MPS, MathOptFormat.MPS.Model()),
+            (MathOptFormat.FORMAT_SDPA, MathOptFormat.SDPA.Model()),
         ]
             @test typeof(
                 MathOptFormat.Model(format = format, filename = "foo.bar")
@@ -79,6 +80,7 @@ const MOIU = MOI.Utilities
             (".lp", MathOptFormat.LP.Model()),
             (".mof.json", MathOptFormat.MOF.Model()),
             (".mps", MathOptFormat.MPS.Model()),
+            (".sdpa", MathOptFormat.SDPA.Model()),
         ]
             @test typeof(MathOptFormat.Model(filename = "a$(ext)")) ==
                 typeof(model)

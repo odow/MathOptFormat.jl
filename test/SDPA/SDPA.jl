@@ -8,7 +8,7 @@ import MathOptFormat
 const SDPA = MathOptFormat.SDPA
 
 const SDPA_TEST_FILE = "test.sdpa"
-const MODELS_DIR = joinpath(@__DIR__, "models")
+const SDPA_MODELS_DIR = joinpath(@__DIR__, "models")
 
 function set_var_and_con_names(model::MOI.ModelLike)
     variable_names = String[]
@@ -89,7 +89,7 @@ end
 end
 
 @testset "Deleted variables error with $T" for T in [Int, Float64]
-    model = SDPA.Model(T)
+    model = SDPA.Model(; number_type = T)
     x = MOI.add_variable(model)
     MOI.delete(model, x)
     y = MOI.add_variable(model)
@@ -100,7 +100,7 @@ end
 end
 
 @testset "Objective function with $T" for T in [Int, Float64]
-    model = SDPA.Model(T)
+    model = SDPA.Model(; number_type = T)
     @test !MOI.supports(model, MOI.ObjectiveFunction{MOI.SingleVariable}())
     @test !MOI.supports(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}())
 end
@@ -111,35 +111,35 @@ end
         MOI.add_variable(model)
         err = ErrorException("Cannot read in file because model is not empty.")
         @test_throws err MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "example_A.sdpa"))
+            joinpath(SDPA_MODELS_DIR, "example_A.sdpa"))
     end
 
     @testset "Bad number of blocks" begin
         model = SDPA.Model()
         err = ErrorException("The number of blocks (3) does not match the length of the list of blocks dimensions (2).")
         @test_throws err MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "bad_blocks.sdpa"))
+            joinpath(SDPA_MODELS_DIR, "bad_blocks.sdpa"))
     end
 
     @testset "Bad number of variables" begin
         model = SDPA.Model()
         err = ErrorException("The number of variables (3) does not match the length of the list of coefficients for the objective function vector of coefficients (2).")
         @test_throws err MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "bad_vars.sdpa"))
+            joinpath(SDPA_MODELS_DIR, "bad_vars.sdpa"))
     end
 
     @testset "Wrong number of values in entry" begin
         model = SDPA.Model()
         err = ErrorException("Invalid line specifying entry: 0 1 2 2. There are 4 values instead of 5.")
         @test_throws err MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "bad_entry.sdpa"))
+            joinpath(SDPA_MODELS_DIR, "bad_entry.sdpa"))
     end
 
     @testset "Non-diagonal entry in diagonal block" begin
         model = SDPA.Model()
         err = ErrorException("Invalid line specifying entry: 0 1 1 2 1.0. `1 != 2` while block 1 has dimension 2 so it is a diagonal block.")
         @test_throws err MOI.read_from_file(model,
-            joinpath(MODELS_DIR, "bad_diag.sdpa"))
+            joinpath(SDPA_MODELS_DIR, "bad_diag.sdpa"))
     end
 end
 
@@ -150,7 +150,10 @@ end
             variables: x
             minobjective: x + 1
         """)
-        err = ErrorException("Nonzero constant in objective function not supported, note that the constant may be added by the substitution of a bridged variable.")
+        err = ErrorException(
+            "Nonzero constant in objective function not supported. Note that " *
+            "the constant may be added by the substitution of a bridged variable."
+        )
         @test_throws err MOI.write_to_file(model, SDPA_TEST_FILE)
     end
 
@@ -203,7 +206,7 @@ example_models = [
     """),
 ]
 @testset "Read and write/read $model_name" for (model_name, model_string) in example_models
-    test_read(joinpath(MODELS_DIR, model_name), model_string)
+    test_read(joinpath(SDPA_MODELS_DIR, model_name), model_string)
     test_write_then_read(model_string)
 end
 
