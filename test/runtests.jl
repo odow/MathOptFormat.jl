@@ -21,7 +21,7 @@ const MOIU = MOI.Utilities
             for dest in models
                 model_dest = dest()
                 MOI.copy_to(model_dest, model_src)
-                @test !isempty(sprint(io -> MOI.write_to_file(model_dest, io)))
+                @test !isempty(sprint(write, model_dest))
             end
             model_dest = MOIU.MockOptimizer(MOIU.Model{Float64}())
             MOI.copy_to(model_dest, model_src)

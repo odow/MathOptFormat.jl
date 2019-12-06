@@ -314,7 +314,7 @@ end
             MOI.EqualTo(1.0)
         )
         MOI.set(model, MOI.ConstraintName(), c, "c c")
-        @test sprint(io -> MOI.write_to_file(model, io)) == join([
+        @test sprint(write, model) == join([
             "NAME          ",
             "ROWS",
             " N  OBJ",

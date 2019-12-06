@@ -140,34 +140,72 @@ function create_unique_variable_names(
     end
 end
 
+const MATH_OPT_FORMATS = Union{
+    CBF.InnerModel,
+    LP.InnerModel,
+    MOF.Model,
+    MPS.InnerModel
+}
+
 """
     FileFormat
 
 List of accepted export formats.
 
-`AUTOMATIC_FILE_FORMAT` corresponds to a detection from the file name, only
-based on the extension (regardless of compression format).
+- `FORMAT_CBF`: the Conic Benchmark format
+- `FORMAT_LP`: the LP file format
+- `FORMAT_MOF`: the MathOptFormat file format
+- `FORMAT_MPS`: the MPS file format
+- `AUTOMATIC_FILE_FORMAT`: try to detect the file format based on the file name.
 """
 @enum(
     FileFormat,
+    AUTOMATIC_FILE_FORMAT,
     FORMAT_CBF,
     FORMAT_LP,
     FORMAT_MOF,
     FORMAT_MPS,
-    AUTOMATIC_FILE_FORMAT,
 )
 
-const _FILE_FORMATS = Dict{FileFormat, Tuple{String, Any}}(
-    # ENUMERATED VALUE => extension, model type
-    FORMAT_CBF => (".cbf", CBF.Model),
-    FORMAT_LP => (".lp", LP.Model),
-    FORMAT_MOF => (".mof.json", MOF.Model),
-    FORMAT_MPS => (".mps", MPS.Model)
-)
+"""
+    new_model(
+        format::FileFormat, filename::Union{Nothing, String} = nothing
+    )
 
-const MATH_OPT_FORMATS = Union{
-    CBF.InnerModel, LP.InnerModel, MOF.Model, MPS.InnerModel
-}
+Return model corresponding to the `FileFormat` `format`.
+
+If `format == AUTOMATIC_FILE_FORMAT`, attempt to guess the format from the
+`filename`.
+"""
+function new_model(
+    format::FileFormat, filename::Union{Nothing, String} = nothing
+)
+    if format == FORMAT_CBF
+        return CBF.Model()
+    elseif format == FORMAT_LP
+        return LP.Model()
+    elseif format == FORMAT_MOF
+        return MOF.Model()
+    elseif format == FORMAT_MPS
+        return MPS.Model()
+    else
+        @assert format == AUTOMATIC_FILE_FORMAT
+        if filename === nothing
+            error("Unable to automatically detect file format. No filename provided.")
+        end
+        for (ext, model) in [
+            (".cbf", CBF.Model),
+            (".lp", LP.Model),
+            (".mof.json", MOF.Model),
+            (".mps", MPS.Model)
+        ]
+            if endswith(filename, ext) || occursin(ext, filename)
+                return model()
+            end
+        end
+        error("Unable to detect automatically format of $(filename).")
+    end
+end
 
 function MOI.write_to_file(
     model::MATH_OPT_FORMATS,
@@ -175,7 +213,7 @@ function MOI.write_to_file(
     compression::AbstractCompressionScheme = AutomaticCompression()
 )
     _compressed_open(filename, "w", compression) do io
-        MOI.write_to_file(model, io)
+        write(io, model)
     end
 end
 
@@ -185,20 +223,8 @@ function MOI.read_from_file(
     compression::AbstractCompressionScheme = AutomaticCompression()
 )
     _compressed_open(filename, "r", compression) do io
-        MOI.read_from_file(model, io)
+        read!(io, model)
     end
-end
-
-function _detect_file_format(filename::String)
-    for (format, (ext, _)) in _FILE_FORMATS
-        if endswith(filename, ext) || occursin("$(ext).", filename)
-            return format
-        end
-    end
-    error(
-        "Unable to detect automatically format of $(filename). Use the " *
-        "`file_format` keyword to specify the file format."
-    )
 end
 
 """
@@ -218,10 +244,7 @@ function read_from_file(
     compression::AbstractCompressionScheme = AutomaticCompression(),
     file_format::FileFormat = AUTOMATIC_FILE_FORMAT,
 )
-    if file_format == AUTOMATIC_FILE_FORMAT
-        file_format = _detect_file_format(filename)
-    end
-    model = _FILE_FORMATS[file_format][2]()
+    model = new_model(file_format, filename)
     MOI.read_from_file(model, filename; compression = compression)
     return model
 end
