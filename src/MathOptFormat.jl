@@ -37,27 +37,31 @@ List of accepted export formats.
     Model(
         ;
         format::FileFormat = FORMAT_AUTOMATIC,
-        filename::Union{Nothing, String} = nothing
+        filename::Union{Nothing, String} = nothing,
+        kwargs...
     )
 
 Return model corresponding to the `FileFormat` `format`, or, if
 `format == FORMAT_AUTOMATIC`, guess the format from `filename`.
 
 The `filename` argument is only needed if `format == FORMAT_AUTOMATIC`.
+
+`kwargs` are passed to the underlying model constructor.
 """
 function Model(
     ;
     format::FileFormat = FORMAT_AUTOMATIC,
-    filename::Union{Nothing, String} = nothing
+    filename::Union{Nothing, String} = nothing,
+    kwargs...
 )
     if format == FORMAT_CBF
-        return CBF.Model()
+        return CBF.Model(; kwargs...)
     elseif format == FORMAT_LP
-        return LP.Model()
+        return LP.Model(; kwargs...)
     elseif format == FORMAT_MOF
-        return MOF.Model()
+        return MOF.Model(; kwargs...)
     elseif format == FORMAT_MPS
-        return MPS.Model()
+        return MPS.Model(; kwargs...)
     else
         @assert format == FORMAT_AUTOMATIC
         if filename === nothing
@@ -70,7 +74,7 @@ function Model(
             (".mps", MPS.Model)
         ]
             if endswith(filename, ext) || occursin("$(ext).", filename)
-                return model()
+                return model(; kwargs...)
             end
         end
         error("Unable to automatically detect format of $(filename).")
