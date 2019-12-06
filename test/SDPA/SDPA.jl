@@ -59,6 +59,45 @@ end
 
 @test sprint(show, SDPA.Model()) == "A SemiDefinite Programming Algoithm Format (SDPA) model"
 
+@testset "Support errors" begin
+    @testset "$set variable bound" for set in [
+            MOI.EqualTo(1.0),
+            MOI.LessThan(1.0),
+            MOI.GreaterThan(1.0),
+            MOI.Interval(1.0, 2.0),
+            MOI.Semiinteger(1.0, 2.0),
+            MOI.Semicontinuous(1.0, 2.0),
+            MOI.Integer(),
+            MOI.ZeroOne()
+        ]
+        model_string = """
+        variables: x
+        minobjective: 1x
+        c: x in $set
+        """
+        model = SDPA.Model()
+        err = MOI.UnsupportedConstraint{MOI.SingleVariable, typeof(set)}
+        @test_throws err MOIU.loadfromstring!(model, model_string)
+    end
+end
+
+@testset "Deleted variables error with $T" for T in [Int, Float64]
+    model = SDPA.Model(T)
+    x = MOI.add_variable(model)
+    MOI.delete(model, x)
+    y = MOI.add_variable(model)
+    fy = MOI.SingleVariable(y)
+    MOI.add_constraint(model, MOIU.vectorize([one(T) * fy]), MOI.Nonnegatives(1))
+    err = ErrorException("Non-contiguous variable indices not supported. This might be due to deleted variables.")
+    @test_throws err MOI.write_to_file(model, SDPA_TEST_FILE)
+end
+
+@testset "Objective function with $T" for T in [Int, Float64]
+    model = SDPA.Model(T)
+    @test !MOI.supports(model, MOI.ObjectiveFunction{MOI.SingleVariable}())
+    @test !MOI.supports(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}())
+end
+
 @testset "Read errors" begin
     @testset "Non-empty model" begin
         model = SDPA.Model()
@@ -111,6 +150,13 @@ end
     # TODO NLP not supported test.
 end
 
+@testset "Model name" begin
+    model = SDPA.Model()
+    MOI.set(model, MOI.Name(), "FooBar")
+    MOI.write_to_file(model, SDPA_TEST_FILE)
+    @test readlines(SDPA_TEST_FILE) == ["\"FooBar", "0", "0", "", ""]
+end
+
 write_read_models = [
     ("min ScalarAffine", """
         variables: x, y
@@ -139,6 +185,11 @@ example_models = [
         c1: [x + 1, 0, x + 2] in PositiveSemidefiniteConeTriangle(2)
         c2: [5y + 3, 4y, 6y + 4] in PositiveSemidefiniteConeTriangle(2)
     """),
+    ("example_B.sdpa", """
+        variables: x
+        minobjective: 1x
+        c1: [0, 2x + 2, 0] in PositiveSemidefiniteConeTriangle(2)
+    """),
 ]
 @testset "Read and write/read $model_name" for (model_name, model_string) in example_models
     test_read(joinpath(MODELS_DIR, model_name), model_string)
@@ -146,5 +197,5 @@ example_models = [
 end
 
 # Clean up.
-#sleep(1.0)  # Allow time for unlink to happen.
-#rm(SDPA_TEST_FILE, force = true)
+sleep(1.0)  # Allow time for unlink to happen.
+rm(SDPA_TEST_FILE, force = true)

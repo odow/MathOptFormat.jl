@@ -1,7 +1,5 @@
 module SDPA
 
-# Copies a model in geometric form into SDPA format.
-# If the model is in standard form, use Dualization.jl to transform it into geometric form.
 # See http://plato.asu.edu/ftp/sdpa_format.txt
 
 import MathOptInterface
@@ -33,12 +31,20 @@ struct Options end
 get_options(m::InnerModel) = get(m.ext, :SDPA_OPTIONS, Options())
 
 """
-    Model()
+    Model(T::Type = Float64)
 
-Create an empty instance of `MathOptFormat.SDPA.Model`.
+Create an empty instance of `MathOptFormat.SDPA.Model{T}`.
+
+Note that the model is in geometric form. That is, the SDP model is represented
+as a minimization with free variables and affine constraints in either the
+nonnegative orthant or the positive semidefinite cone.
+
+If a model is in standard form, that is, nonnegative and positive semidefinite
+variables with equality constraints, use `Dualization.jl` to transform it into
+the geometric form.
 """
-function Model()
-    model = InnerModel{Float64}()
+function Model(T::Type = Float64)
+    model = InnerModel{T}()
     model.ext[:SDPA_OPTIONS] = Options()
     return model
 end
@@ -238,12 +244,12 @@ function MOI.read_from_file(model::InnerModel{T}, io::IO) where T
             end
             funcs = [MOI.VectorAffineFunction(MOI.VectorAffineTerm{T}[], zeros(T, MOI.dimension(block_sets[i]))) for i in 1:num_blocks]
         elseif !objective_read
+            num_vars = MOI.get(model, MOI.NumberOfVariables())
             if isempty(line) && !iszero(num_vars)
                 continue
             end
             objective_read = true
             c = parse.(T, split(line))
-            num_vars = MOI.get(model, MOI.NumberOfVariables())
             if length(c) != num_vars
                 error("The number of variables ($num_vars) does not match the length of the list of coefficients for the objective function vector of coefficients ($(length(c))).")
             end
