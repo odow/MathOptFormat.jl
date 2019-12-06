@@ -165,7 +165,6 @@ end
     model = LP.Model()
     exception = ErrorException("read! is not implemented for LP files.")
     @test_throws exception MOI.read_from_file(model, LP_TEST_FILE)
-    @test_throws exception MathOptFormat.read_from_file(LP_TEST_FILE)
 end
 
 # Clean up

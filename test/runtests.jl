@@ -39,14 +39,15 @@ const MOIU = MOI.Utilities
     end
 
     @testset "Provided compression schemes" begin
-        model = MathOptFormat.read_from_file(
-            joinpath(@__DIR__, "MPS", "free_integer.mps")
-        )
+        filename = joinpath(@__DIR__, "MPS", "free_integer.mps")
+        model = MathOptFormat.Model(filename = filename)
+        MOI.read_from_file(model, filename)
         filename = joinpath(@__DIR__, "free_integer.mps")
         MOI.write_to_file(model, filename * ".garbage")
         for ext in ["", ".bz2", ".gz"]
             MOI.write_to_file(model, filename * ext)
-            MathOptFormat.read_from_file(filename * ext)
+            model2 = MathOptFormat.Model(filename = filename * ext)
+            MOI.read_from_file(model2, filename)
         end
 
         sleep(1.0)  # Allow time for unlink to happen.
@@ -55,18 +56,18 @@ const MOIU = MOI.Utilities
         end
     end
 
-    @testset "new_model" begin
+    @testset "Model" begin
         for (format, model) in [
             (MathOptFormat.FORMAT_CBF, MathOptFormat.CBF.Model()),
             (MathOptFormat.FORMAT_LP, MathOptFormat.LP.Model()),
             (MathOptFormat.FORMAT_MOF, MathOptFormat.MOF.Model()),
             (MathOptFormat.FORMAT_MPS, MathOptFormat.MPS.Model()),
         ]
-            @test typeof(MathOptFormat.new_model(format)) == typeof(model)
+            @test typeof(MathOptFormat.Model(format = format)) == typeof(model)
         end
         @test_throws(
             ErrorException("Unable to automatically detect file format. No filename provided."),
-            MathOptFormat.new_model(MathOptFormat.FORMAT_AUTOMATIC)
+            MathOptFormat.Model(format = MathOptFormat.FORMAT_AUTOMATIC)
         )
         for (ext, model) in [
             (".cbf", MathOptFormat.CBF.Model()),
@@ -74,16 +75,14 @@ const MOIU = MOI.Utilities
             (".mof.json", MathOptFormat.MOF.Model()),
             (".mps", MathOptFormat.MPS.Model()),
         ]
-            @test typeof(MathOptFormat.new_model(
-                MathOptFormat.FORMAT_AUTOMATIC, "a$(ext)"
-            )) == typeof(model)
-            @test typeof(MathOptFormat.new_model(
-                MathOptFormat.FORMAT_AUTOMATIC, "a$(ext).gz"
-            )) == typeof(model)
+            @test typeof(MathOptFormat.Model(filename = "a$(ext)")) ==
+                typeof(model)
+            @test typeof(MathOptFormat.Model(filename = "a$(ext).gz")) ==
+                typeof(model)
         end
         @test_throws(
             ErrorException("Unable to automatically detect format of a.b."),
-            MathOptFormat.new_model(MathOptFormat.FORMAT_AUTOMATIC, "a.b")
+            MathOptFormat.Model(filename = "a.b")
         )
     end
 end
