@@ -5,7 +5,7 @@ const MOI = MathOptFormat.MOI
 const MOIU = MOI.Utilities
 
 @testset "MathOptFormat tests" begin
-    @testset "$(file)" for file in ["CBF", "LP", "MOF", "MPS"]
+    @testset "$(file)" for file in ["CBF", "LP", "MOF", "MPS", "SDPA"]
         include("$(file)/$(file).jl")
     end
 
@@ -14,7 +14,8 @@ const MOIU = MOI.Utilities
             MathOptFormat.CBF.Model,
             MathOptFormat.LP.Model,
             MathOptFormat.MOF.Model,
-            MathOptFormat.MPS.Model
+            MathOptFormat.MPS.Model,
+            MathOptFormat.SDPA.Model
         ]
         for src in models
             model_src = src()
