@@ -35,19 +35,26 @@ List of accepted export formats.
 
 """
     Model(
-        format::FileFormat, filename::Union{Nothing, String} = nothing
+        ;
+        format::FileFormat = FORMAT_AUTOMATIC,
+        filename::Union{Nothing, String} = nothing
     )
 
-Return model corresponding to the `FileFormat` `format`.
+Return model corresponding to the `FileFormat` `format`, or, if
+`format == FORMAT_AUTOMATIC`, guess the format from `filename`.
 
-If `format == FORMAT_AUTOMATIC`, guess the format from the `filename`.
+You must pass _one_ of `format` or `filename`. You cannot use both arguments.
 """
 function Model(
     ;
     format::FileFormat = FORMAT_AUTOMATIC,
     filename::Union{Nothing, String} = nothing
 )
-    if format == FORMAT_CBF
+    if format == FORMAT_AUTOMATIC && filename === nothing
+        error("When `format == FORMAT_AUTOMATIC`, you must pass a `filename`.")
+    elseif format != FORMAT_AUTOMATIC && filename !== nothing
+        error("You cannot pass `format` and `filename` at the same time.")
+    elseif format == FORMAT_CBF
         return CBF.Model()
     elseif format == FORMAT_LP
         return LP.Model()
@@ -56,13 +63,7 @@ function Model(
     elseif format == FORMAT_MPS
         return MPS.Model()
     else
-        @assert format == FORMAT_AUTOMATIC
-        if filename === nothing
-            error(
-                "Unable to automatically detect file format. " *
-                "No filename provided."
-            )
-        end
+        @assert format == FORMAT_AUTOMATIC && filename !== nothing
         for (ext, model) in [
             (".cbf", CBF.Model),
             (".lp", LP.Model),

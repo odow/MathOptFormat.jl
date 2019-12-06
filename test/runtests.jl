@@ -66,8 +66,18 @@ const MOIU = MOI.Utilities
             @test typeof(MathOptFormat.Model(format = format)) == typeof(model)
         end
         @test_throws(
-            ErrorException("Unable to automatically detect file format. No filename provided."),
+            ErrorException(
+                "When `format == FORMAT_AUTOMATIC`, you must pass a `filename`."
+            ),
             MathOptFormat.Model(format = MathOptFormat.FORMAT_AUTOMATIC)
+        )
+        @test_throws(
+            ErrorException(
+                "You cannot pass `format` and `filename` at the same time."
+            ),
+            MathOptFormat.Model(
+                format = MathOptFormat.FORMAT_CBF, filename = "c.cbf"
+            )
         )
         for (ext, model) in [
             (".cbf", MathOptFormat.CBF.Model()),
