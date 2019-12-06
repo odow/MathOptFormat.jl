@@ -49,7 +49,7 @@ function Model(T::Type = Float64)
     return model
 end
 
-Base.show(io::IO, ::InnerModel) = print(io, "A SemiDefinite Programming Algoithm Format (SDPA) model")
+Base.show(io::IO, ::InnerModel) = print(io, "A SemiDefinite Programming Algorithm Format (SDPA) model")
 
 # ==============================================================================
 #

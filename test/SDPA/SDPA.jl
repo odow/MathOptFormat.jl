@@ -63,7 +63,7 @@ function test_read(filename::String, model_string::String)
     MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
 end
 
-@test sprint(show, SDPA.Model()) == "A SemiDefinite Programming Algoithm Format (SDPA) model"
+@test sprint(show, SDPA.Model()) == "A SemiDefinite Programming Algorithm Format (SDPA) model"
 
 @testset "Support errors" begin
     @testset "$set variable bound" for set in [
