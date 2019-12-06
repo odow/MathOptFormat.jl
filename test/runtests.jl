@@ -54,4 +54,36 @@ const MOIU = MOI.Utilities
             rm(filename * ext, force = true)
         end
     end
+
+    @testset "new_model" begin
+        for (format, model) in [
+            (MathOptFormat.FORMAT_CBF, MathOptFormat.CBF.Model()),
+            (MathOptFormat.FORMAT_LP, MathOptFormat.LP.Model()),
+            (MathOptFormat.FORMAT_MOF, MathOptFormat.MOF.Model()),
+            (MathOptFormat.FORMAT_MPS, MathOptFormat.MPS.Model()),
+        ]
+            @test typeof(MathOptFormat.new_model(format)) == typeof(model)
+        end
+        @test_throws(
+            ErrorException("Unable to automatically detect file format. No filename provided."),
+            MathOptFormat.new_model(MathOptFormat.AUTOMATIC_FILE_FORMAT)
+        )
+        for (ext, model) in [
+            (".cbf", MathOptFormat.CBF.Model()),
+            (".lp", MathOptFormat.LP.Model()),
+            (".mof.json", MathOptFormat.MOF.Model()),
+            (".mps", MathOptFormat.MPS.Model()),
+        ]
+            @test typeof(MathOptFormat.new_model(
+                MathOptFormat.AUTOMATIC_FILE_FORMAT, "a$(ext)"
+            )) == typeof(model)
+            @test typeof(MathOptFormat.new_model(
+                MathOptFormat.AUTOMATIC_FILE_FORMAT, "a$(ext).gz"
+            )) == typeof(model)
+        end
+        @test_throws(
+            ErrorException("Unable to automatically detect format of a.b."),
+            MathOptFormat.new_model(MathOptFormat.AUTOMATIC_FILE_FORMAT, "a.b")
+        )
+    end
 end

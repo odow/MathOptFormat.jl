@@ -203,7 +203,7 @@ function new_model(
                 return model()
             end
         end
-        error("Unable to detect automatically format of $(filename).")
+        error("Unable to automatically detect format of $(filename).")
     end
 end
 
