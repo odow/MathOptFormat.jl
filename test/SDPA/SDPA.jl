@@ -41,6 +41,12 @@ function test_write_then_read(model_string::String)
     model2 = SDPA.Model()
     MOI.read_from_file(model2, SDPA_TEST_FILE)
     set_var_and_con_names(model2)
+    if MOI.get(model1, MOI.ObjectiveSense()) == MOI.MAX_SENSE
+        MOI.set(model2, MOI.ObjectiveSense(), MOI.MAX_SENSE)
+        attr = MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}()
+        obj = MOI.get(model2, attr)
+        MOI.set(model2, attr, MOIU.operate(-, Float64, obj))
+    end
 
     MOIU.test_models_equal(model1, model2, variable_names, constraint_names)
 end
@@ -76,6 +82,7 @@ end
         c: x in $set
         """
         model = SDPA.Model()
+        @test !MOI.supports_constraint(model, MOI.SingleVariable, typeof(set))
         err = MOI.UnsupportedConstraint{MOI.SingleVariable, typeof(set)}
         @test_throws err MOIU.loadfromstring!(model, model_string)
     end
@@ -161,6 +168,10 @@ write_read_models = [
     ("min ScalarAffine", """
         variables: x, y
         minobjective: 1.2x + -1y
+    """),
+    ("max ScalarAffine", """
+        variables: x, y
+        maxobjective: 1.2x + -1y
     """),
     ("VectorAffineFunction in Nonnegatives", """
         variables: x, y
